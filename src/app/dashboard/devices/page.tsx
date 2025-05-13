@@ -9,7 +9,17 @@ import {
 import { DeviceList } from "@/components/devices/device-list";
 import { DeviceStats } from "@/components/devices/device-stats";
 
-export default function DevicesPage() {
+export default async function DevicesPage() {
+  try {
+    const response = await fetch("/api/devices", {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    console.log(response);
+  } catch (e) {
+    console.log(e);
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">

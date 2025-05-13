@@ -34,23 +34,18 @@ export function LoginForm() {
     const password = formData.get("password") as string;
 
     try {
-      // In a real application, you would make an API call to authenticate
-      // const response = await fetch("/api/auth/login", {
-      //   method: "POST",
-      //   body: JSON.stringify({ username, password }),
-      //   headers: { "Content-Type": "application/json" },
-      // });
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ username, password }),
+        headers: { "Content-Type": "application/json" },
+      });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // For demo purposes, hardcoded credentials
-      if (username === "admin" && password === "password") {
-        // Simulate successful login
+      if (response.status === 200 && response.ok) {
         router.push("/dashboard");
-      } else {
-        setError("Invalid username or password");
+        return;
       }
+
+      setError("Invalid username or password");
     } catch (error) {
       setError("An error occurred. Please try again.");
     } finally {
