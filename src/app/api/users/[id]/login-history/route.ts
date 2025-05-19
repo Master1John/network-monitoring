@@ -1,138 +1,5 @@
 import { NextResponse } from "next/server";
-
-// Sample user login history data
-const userLoginHistoryData = {
-  "user-001": [
-    {
-      id: "login-001",
-      timestamp: "2023-04-06T10:45:00",
-      ipAddress: "192.168.1.101",
-      location: "New York, USA",
-      device: "Windows 11 / Chrome",
-      status: "success",
-      twoFactor: true,
-    },
-    {
-      id: "login-005",
-      timestamp: "2023-04-05T08:45:00",
-      ipAddress: "192.168.1.101",
-      location: "New York, USA",
-      device: "Windows 11 / Chrome",
-      status: "success",
-      twoFactor: true,
-    },
-    {
-      id: "login-010",
-      timestamp: "2023-04-04T09:30:00",
-      ipAddress: "192.168.1.101",
-      location: "New York, USA",
-      device: "Windows 11 / Chrome",
-      status: "success",
-      twoFactor: true,
-    },
-    {
-      id: "login-015",
-      timestamp: "2023-04-03T10:15:00",
-      ipAddress: "192.168.1.101",
-      location: "New York, USA",
-      device: "Windows 11 / Chrome",
-      status: "success",
-      twoFactor: true,
-    },
-    {
-      id: "login-020",
-      timestamp: "2023-04-02T08:30:00",
-      ipAddress: "192.168.1.101",
-      location: "New York, USA",
-      device: "Windows 11 / Chrome",
-      status: "success",
-      twoFactor: true,
-    },
-  ],
-  "user-002": [
-    {
-      id: "login-002",
-      timestamp: "2023-04-06T10:30:00",
-      ipAddress: "192.168.1.102",
-      location: "San Francisco, USA",
-      device: "macOS / Safari",
-      status: "success",
-      twoFactor: true,
-    },
-    {
-      id: "login-006",
-      timestamp: "2023-04-06T10:00:00",
-      ipAddress: "203.0.113.42",
-      location: "Los Angeles, USA",
-      device: "macOS / Safari",
-      status: "success",
-      twoFactor: true,
-    },
-  ],
-  "user-003": [
-    {
-      id: "login-003",
-      timestamp: "2023-04-06T09:15:00",
-      ipAddress: "192.168.1.103",
-      location: "Chicago, USA",
-      device: "Windows 10 / Firefox",
-      status: "success",
-      twoFactor: true,
-    },
-  ],
-  "user-008": [
-    {
-      id: "login-004",
-      timestamp: "2023-04-06T10:30:00",
-      ipAddress: "192.168.1.108",
-      location: "Boston, USA",
-      device: "macOS / Chrome",
-      status: "failed",
-      twoFactor: false,
-      reason: "Invalid password",
-    },
-    {
-      id: "login-007",
-      timestamp: "2023-04-06T10:25:00",
-      ipAddress: "192.168.1.108",
-      location: "Boston, USA",
-      device: "macOS / Chrome",
-      status: "failed",
-      twoFactor: false,
-      reason: "Invalid password",
-    },
-    {
-      id: "login-008",
-      timestamp: "2023-04-06T10:20:00",
-      ipAddress: "192.168.1.108",
-      location: "Boston, USA",
-      device: "macOS / Chrome",
-      status: "failed",
-      twoFactor: false,
-      reason: "Invalid password",
-    },
-    {
-      id: "login-009",
-      timestamp: "2023-04-04T14:20:00",
-      ipAddress: "192.168.1.108",
-      location: "Boston, USA",
-      device: "macOS / Chrome",
-      status: "success",
-      twoFactor: false,
-    },
-  ],
-  "user-012": [
-    {
-      id: "login-011",
-      timestamp: "2023-04-06T10:05:00",
-      ipAddress: "192.168.1.112",
-      location: "Seattle, USA",
-      device: "Windows 11 / Edge",
-      status: "success",
-      twoFactor: true,
-    },
-  ],
-};
+import prisma from "@/lib/prisma";
 
 export async function GET(
   request: Request,
@@ -149,44 +16,44 @@ export async function GET(
       ? Number.parseInt(url.searchParams.get("limit")!)
       : undefined;
 
-    // Get login history for the user
-    const loginHistory =
-      userLoginHistoryData[userId as keyof typeof userLoginHistoryData] || [];
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
 
-    // Apply filters
-    let filteredHistory = [...loginHistory];
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Build the filter object for Prisma
+    const filter: any = { userId };
 
     if (status) {
-      filteredHistory = filteredHistory.filter(
-        (login) => login.status === status,
-      );
+      filter.status = status;
     }
 
-    if (twoFactor) {
-      const isTwoFactor = twoFactor === "true";
-      filteredHistory = filteredHistory.filter(
-        (login) => login.twoFactor === isTwoFactor,
-      );
+    if (twoFactor !== null) {
+      filter.twoFactor = twoFactor === "true";
     }
 
-    // Apply limit if specified
-    if (limit && limit > 0) {
-      filteredHistory = filteredHistory.slice(0, limit);
-    }
+    // Fetch login history with filters
+    const loginHistory = await prisma.loginHistory.findMany({
+      where: filter,
+      orderBy: { timestamp: "desc" },
+      take: limit,
+    });
 
     // Calculate statistics
     const stats = {
-      total: filteredHistory.length,
-      success: filteredHistory.filter((login) => login.status === "success")
+      total: loginHistory.length,
+      success: loginHistory.filter((login) => login.status === "success")
         .length,
-      failed: filteredHistory.filter((login) => login.status === "failed")
-        .length,
-      twoFactorEnabled: filteredHistory.filter((login) => login.twoFactor)
-        .length,
+      failed: loginHistory.filter((login) => login.status === "failed").length,
+      twoFactorEnabled: loginHistory.filter((login) => login.twoFactor).length,
     };
 
     return NextResponse.json({
-      loginHistory: filteredHistory,
+      loginHistory,
       stats,
     });
   } catch (error) {
@@ -217,14 +84,30 @@ export async function POST(
       );
     }
 
-    // In a real application, you would save to a database
-    // For this mock API, we'll just return success with the data
-    const newLogin = {
-      id: `login-${Math.floor(Math.random() * 1000)}`,
-      timestamp: new Date().toISOString(),
-      twoFactor: loginData.twoFactor || false,
-      ...loginData,
-    };
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Create the login record
+    const newLogin = await prisma.loginHistory.create({
+      data: {
+        ipAddress: loginData.ipAddress,
+        location: loginData.location,
+        device: loginData.device,
+        status: loginData.status,
+        twoFactor: loginData.twoFactor || false,
+        reason: loginData.reason,
+        timestamp: loginData.timestamp
+          ? new Date(loginData.timestamp)
+          : new Date(),
+        userId,
+      },
+    });
 
     return NextResponse.json({
       success: true,

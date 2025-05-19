@@ -1,4 +1,5 @@
-import { Suspense } from "react";
+"use client";
+import { Suspense, useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -9,8 +10,33 @@ import {
 import { UserList } from "@/components/users/user-list";
 import { UserStats } from "@/components/users/user-stats";
 import { UserActivity } from "@/components/users/user-activity";
+import { useRouter } from "next/navigation";
 
 export default function UsersPage() {
+  const [stats, setStats] = useState<{ total: number; active: number }>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        const response = await fetch("/api/users");
+        const data = await response.json();
+
+        if (data.stats) {
+          setStats(data.stats);
+        }
+
+        console.log(data.stats);
+      } catch (error) {
+        console.error("Failed to fetch users stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchUsers();
+  }, []);
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -22,7 +48,7 @@ export default function UsersPage() {
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">{stats.total}</div>
             <p className="text-xs text-muted-foreground">+1 from last month</p>
           </CardContent>
         </Card>
@@ -31,7 +57,7 @@ export default function UsersPage() {
             <CardTitle className="text-sm font-medium">Active Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
+            <div className="text-2xl font-bold">{stats.active}</div>
             <p className="text-xs text-muted-foreground">67% of total users</p>
           </CardContent>
         </Card>

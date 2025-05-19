@@ -38,150 +38,25 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// Sample keylog data by device
-const deviceKeylogs = {
-  "device-003": [
-    {
-      id: "KL001",
-      timestamp: "2023-04-06T10:30:00",
-      type: "Application",
-      content: "Microsoft Word - Document1.docx",
-      flagged: false,
-    },
-    {
-      id: "KL005",
-      timestamp: "2023-04-06T10:25:00",
-      type: "Browser",
-      content: "https://mail.google.com",
-      flagged: false,
-    },
-    {
-      id: "KL009",
-      timestamp: "2023-04-06T10:20:00",
-      type: "System",
-      content: "Login",
-      flagged: false,
-    },
-    {
-      id: "KL013",
-      timestamp: "2023-04-06T10:15:00",
-      type: "Application",
-      content: "Microsoft Excel - Budget2023.xlsx",
-      flagged: false,
-    },
-    {
-      id: "KL017",
-      timestamp: "2023-04-06T10:10:00",
-      type: "Browser",
-      content: "https://internal.company.com/reports",
-      flagged: false,
-    },
-    {
-      id: "KL021",
-      timestamp: "2023-04-06T10:05:00",
-      type: "Application",
-      content: "Password Manager",
-      flagged: true,
-    },
-    {
-      id: "KL025",
-      timestamp: "2023-04-06T10:00:00",
-      type: "System",
-      content: "Startup",
-      flagged: false,
-    },
-  ],
-  "device-004": [
-    {
-      id: "KL002",
-      timestamp: "2023-04-06T09:45:00",
-      type: "Browser",
-      content: "https://internal.company.com/sensitive",
-      flagged: true,
-    },
-    {
-      id: "KL006",
-      timestamp: "2023-04-06T09:40:00",
-      type: "Application",
-      content: "Adobe Photoshop",
-      flagged: false,
-    },
-    {
-      id: "KL010",
-      timestamp: "2023-04-06T09:35:00",
-      type: "System",
-      content: "Login",
-      flagged: false,
-    },
-  ],
-  "device-006": [
-    {
-      id: "KL003",
-      timestamp: "2023-04-06T10:40:00",
-      type: "System",
-      content: "Database backup",
-      flagged: false,
-    },
-    {
-      id: "KL007",
-      timestamp: "2023-04-06T10:35:00",
-      type: "Application",
-      content: "MySQL Workbench",
-      flagged: false,
-    },
-    {
-      id: "KL011",
-      timestamp: "2023-04-06T10:30:00",
-      type: "System",
-      content: "Service restart: nginx",
-      flagged: false,
-    },
-    {
-      id: "KL015",
-      timestamp: "2023-04-06T10:25:00",
-      type: "System",
-      content: "Failed login attempt: root",
-      flagged: true,
-    },
-    {
-      id: "KL019",
-      timestamp: "2023-04-06T10:20:00",
-      type: "System",
-      content: "Failed login attempt: admin",
-      flagged: true,
-    },
-    {
-      id: "KL023",
-      timestamp: "2023-04-06T10:15:00",
-      type: "System",
-      content: "Failed login attempt: administrator",
-      flagged: true,
-    },
-  ],
-  "device-007": [
-    {
-      id: "KL004",
-      timestamp: "2023-04-06T10:20:00",
-      type: "Application",
-      content: "Email - Confidential Report",
-      flagged: true,
-    },
-    {
-      id: "KL008",
-      timestamp: "2023-04-06T10:15:00",
-      type: "Browser",
-      content: "https://finance.company.com/reports",
-      flagged: false,
-    },
-    {
-      id: "KL012",
-      timestamp: "2023-04-06T10:10:00",
-      type: "Application",
-      content: "Messages - SMS to +1234567890",
-      flagged: false,
-    },
-  ],
-};
+interface Keylog {
+  id: string;
+  type: string;
+  content: string;
+  flagged: boolean;
+  timestamp: string;
+  deviceId: string;
+}
+
+interface KeylogStats {
+  total: number;
+  flagged: number;
+  byType: Record<string, number>;
+}
+
+interface KeylogResponse {
+  keylogs: Keylog[];
+  stats: KeylogStats;
+}
 
 export function DeviceKeylogs({
   deviceId,
@@ -190,19 +65,40 @@ export function DeviceKeylogs({
   deviceId: string;
   limit?: number;
 }) {
-  const [keylogs, setKeylogs] = useState<any[]>([]);
+  const [keylogs, setKeylogs] = useState<Keylog[]>([]);
+  const [stats, setStats] = useState<KeylogStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedKeylog, setSelectedKeylog] = useState<any>(null);
+  const [selectedKeylog, setSelectedKeylog] = useState<Keylog | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const logs = deviceKeylogs[deviceId as keyof typeof deviceKeylogs] || [];
-      setKeylogs(limit ? logs.slice(0, limit) : logs);
+  const fetchKeylogs = async () => {
+    try {
+      setLoading(true);
+      const queryParams = new URLSearchParams();
+      if (limit) queryParams.append("limit", limit.toString());
+
+      const response = await fetch(
+        `/api/devices/${deviceId}/keylogs?${queryParams.toString()}`,
+      );
+      if (!response.ok) {
+        throw new Error(`Error fetching keylogs: ${response.statusText}`);
+      }
+
+      const data: KeylogResponse = await response.json();
+      setKeylogs(data.keylogs);
+      setStats(data.stats);
+    } catch (err) {
+      console.error("Failed to fetch keylogs:", err);
+      setError("Failed to load keylogs. Please try again.");
+    } finally {
       setLoading(false);
-    }, 500);
+    }
+  };
+
+  useEffect(() => {
+    fetchKeylogs();
   }, [deviceId, limit]);
 
   const filteredKeylogs = keylogs.filter(
@@ -219,13 +115,44 @@ export function DeviceKeylogs({
     }).format(date);
   };
 
-  const handleViewKeylog = (keylog: any) => {
+  const handleViewKeylog = (keylog: Keylog) => {
     setSelectedKeylog(keylog);
     setDialogOpen(true);
   };
 
+  const handleFlagKeylog = async (keylog: Keylog) => {
+    try {
+      const response = await fetch(
+        `/api/devices/${deviceId}/keylogs/${keylog.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            flagged: !keylog.flagged,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Error updating keylog: ${response.statusText}`);
+      }
+
+      // Refresh keylogs after update
+      fetchKeylogs();
+    } catch (err) {
+      console.error("Failed to update keylog:", err);
+      // Show error message to user
+    }
+  };
+
   if (loading) {
     return <div>Loading keylogs...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
   }
 
   if (keylogs.length === 0) {
@@ -234,6 +161,31 @@ export function DeviceKeylogs({
 
   return (
     <div>
+      {!limit && stats && (
+        <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="bg-card rounded-lg p-4 shadow">
+            <p className="text-sm text-muted-foreground">Total Keylogs</p>
+            <p className="text-2xl font-bold">{stats.total}</p>
+          </div>
+          <div className="bg-card rounded-lg p-4 shadow">
+            <p className="text-sm text-muted-foreground">Flagged</p>
+            <p className="text-2xl font-bold text-destructive">
+              {stats.flagged}
+            </p>
+          </div>
+          <div className="bg-card rounded-lg p-4 shadow">
+            <p className="text-sm text-muted-foreground">Application Logs</p>
+            <p className="text-2xl font-bold">
+              {stats.byType["Application"] || 0}
+            </p>
+          </div>
+          <div className="bg-card rounded-lg p-4 shadow">
+            <p className="text-sm text-muted-foreground">System Logs</p>
+            <p className="text-2xl font-bold">{stats.byType["System"] || 0}</p>
+          </div>
+        </div>
+      )}
+
       {!limit && (
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center gap-2">
@@ -314,7 +266,9 @@ export function DeviceKeylogs({
                           <Eye className="mr-2 h-4 w-4" />
                           <span>View Details</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleFlagKeylog(keylog)}
+                        >
                           <Flag className="mr-2 h-4 w-4" />
                           <span>{keylog.flagged ? "Unflag" : "Flag"}</span>
                         </DropdownMenuItem>
@@ -344,50 +298,7 @@ export function DeviceKeylogs({
           {selectedKeylog && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    ID
-                  </p>
-                  <p>{selectedKeylog.id}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Timestamp
-                  </p>
-                  <p>{formatDate(selectedKeylog.timestamp)}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Type
-                  </p>
-                  <p>{selectedKeylog.type}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Status
-                  </p>
-                  <p>{selectedKeylog.flagged ? "Flagged" : "Normal"}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Content
-                </p>
-                <div className="mt-1 rounded-md border p-3">
-                  <p className="break-all">{selectedKeylog.content}</p>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Close
-                </Button>
-                <Button
-                  variant="destructive"
-                  disabled={!selectedKeylog.flagged}
-                >
-                  <Flag className="mr-2 h-4 w-4" />
-                  {selectedKeylog.flagged ? "Unflag" : "Flag"}
-                </Button>
+                {/* Additional details for the selected keylog can be added here */}
               </div>
             </div>
           )}

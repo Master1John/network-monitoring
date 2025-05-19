@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowUpDown,
@@ -38,121 +38,40 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Sample user data
-const users = [
-  {
-    id: "user-001",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: "admin",
-    status: "active",
-    lastActive: "2023-04-06T10:45:00",
-    devices: 2,
-  },
-  {
-    id: "user-002",
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    role: "admin",
-    status: "active",
-    lastActive: "2023-04-06T10:30:00",
-    devices: 1,
-  },
-  {
-    id: "user-003",
-    name: "Robert Johnson",
-    email: "robert.johnson@example.com",
-    role: "admin",
-    status: "active",
-    lastActive: "2023-04-06T09:15:00",
-    devices: 3,
-  },
-  {
-    id: "user-004",
-    name: "Sarah Williams",
-    email: "sarah.williams@example.com",
-    role: "user",
-    status: "active",
-    lastActive: "2023-04-06T10:20:00",
-    devices: 1,
-  },
-  {
-    id: "user-005",
-    name: "Michael Brown",
-    email: "michael.brown@example.com",
-    role: "user",
-    status: "active",
-    lastActive: "2023-04-06T08:45:00",
-    devices: 2,
-  },
-  {
-    id: "user-006",
-    name: "Emily Davis",
-    email: "emily.davis@example.com",
-    role: "user",
-    status: "inactive",
-    lastActive: "2023-04-05T16:30:00",
-    devices: 1,
-  },
-  {
-    id: "user-007",
-    name: "David Miller",
-    email: "david.miller@example.com",
-    role: "user",
-    status: "active",
-    lastActive: "2023-04-06T09:50:00",
-    devices: 1,
-  },
-  {
-    id: "user-008",
-    name: "Lisa Wilson",
-    email: "lisa.wilson@example.com",
-    role: "user",
-    status: "locked",
-    lastActive: "2023-04-04T14:20:00",
-    devices: 1,
-  },
-  {
-    id: "user-009",
-    name: "James Taylor",
-    email: "james.taylor@example.com",
-    role: "user",
-    status: "active",
-    lastActive: "2023-04-06T10:10:00",
-    devices: 1,
-  },
-  {
-    id: "user-010",
-    name: "Patricia Moore",
-    email: "patricia.moore@example.com",
-    role: "user",
-    status: "active",
-    lastActive: "2023-04-06T09:30:00",
-    devices: 2,
-  },
-  {
-    id: "user-011",
-    name: "Thomas Anderson",
-    email: "thomas.anderson@example.com",
-    role: "user",
-    status: "inactive",
-    lastActive: "2023-04-05T11:45:00",
-    devices: 1,
-  },
-  {
-    id: "user-012",
-    name: "Jennifer White",
-    email: "jennifer.white@example.com",
-    role: "security",
-    status: "active",
-    lastActive: "2023-04-06T10:05:00",
-    devices: 2,
-  },
-];
+type UserData = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  lastActive: string;
+  deviceCount: number;
+};
 
 export function UserList() {
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const router = useRouter();
+
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        const response = await fetch("/api/users");
+        const data = await response.json();
+
+        if (data.users) {
+          setUsers(data.users);
+        }
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchUsers();
+  }, []);
 
   const filteredUsers = users.filter(
     (user) =>
@@ -220,6 +139,26 @@ export function UserList() {
     router.push(`/dashboard/users/${userId}`);
   };
 
+  const handleRefresh = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/users");
+      const data = await response.json();
+
+      if (data.users) {
+        setUsers(data.users);
+      }
+    } catch (error) {
+      console.error("Failed to refresh users:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div>Loading users...</div>;
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between py-4">
@@ -233,7 +172,12 @@ export function UserList() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-8 gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1"
+            onClick={handleRefresh}
+          >
             <RefreshCw className="h-3.5 w-3.5" />
             <span>Refresh</span>
           </Button>
@@ -288,7 +232,7 @@ export function UserList() {
                 </TableCell>
                 <TableCell>{getStatusBadge(user.status)}</TableCell>
                 <TableCell>{formatDate(user.lastActive)}</TableCell>
-                <TableCell>{user.devices}</TableCell>
+                <TableCell>{user.deviceCount}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger
@@ -332,6 +276,13 @@ export function UserList() {
                 </TableCell>
               </TableRow>
             ))}
+            {filteredUsers.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                  No users found
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>

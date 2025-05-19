@@ -1,176 +1,5 @@
 import { NextResponse } from "next/server";
-
-// In a real application, this would be fetched from a database
-const users = [
-  {
-    id: "user-001",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1 (555) 123-4567",
-    role: "admin",
-    status: "active",
-    lastActive: "2023-04-06T10:45:00",
-    location: "New York, USA",
-    department: "IT",
-    position: "System Administrator",
-    joinDate: "2022-01-15",
-    twoFactorEnabled: true,
-  },
-  {
-    id: "user-002",
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    phone: "+1 (555) 987-6543",
-    role: "admin",
-    status: "active",
-    lastActive: "2023-04-06T10:30:00",
-    location: "San Francisco, USA",
-    department: "IT",
-    position: "Network Administrator",
-    joinDate: "2022-02-10",
-    twoFactorEnabled: true,
-  },
-  {
-    id: "user-003",
-    name: "Robert Johnson",
-    email: "robert.johnson@example.com",
-    phone: "+1 (555) 456-7890",
-    role: "admin",
-    status: "active",
-    lastActive: "2023-04-06T09:15:00",
-    location: "Chicago, USA",
-    department: "IT",
-    position: "IT Director",
-    joinDate: "2021-11-05",
-    twoFactorEnabled: true,
-  },
-  {
-    id: "user-004",
-    name: "Sarah Williams",
-    email: "sarah.williams@example.com",
-    phone: "+1 (555) 567-8901",
-    role: "user",
-    status: "active",
-    lastActive: "2023-04-06T10:20:00",
-    location: "Dallas, USA",
-    department: "Marketing",
-    position: "Marketing Manager",
-    joinDate: "2022-03-01",
-    twoFactorEnabled: false,
-  },
-  {
-    id: "user-005",
-    name: "Michael Brown",
-    email: "michael.brown@example.com",
-    phone: "+1 (555) 678-9012",
-    role: "user",
-    status: "active",
-    lastActive: "2023-04-06T08:45:00",
-    location: "Miami, USA",
-    department: "Sales",
-    position: "Sales Representative",
-    joinDate: "2022-02-15",
-    twoFactorEnabled: false,
-  },
-  {
-    id: "user-006",
-    name: "Emily Davis",
-    email: "emily.davis@example.com",
-    phone: "+1 (555) 789-0123",
-    role: "user",
-    status: "inactive",
-    lastActive: "2023-04-05T16:30:00",
-    location: "Austin, USA",
-    department: "HR",
-    position: "HR Specialist",
-    joinDate: "2022-01-20",
-    twoFactorEnabled: false,
-  },
-  {
-    id: "user-007",
-    name: "David Miller",
-    email: "david.miller@example.com",
-    phone: "+1 (555) 890-1234",
-    role: "user",
-    status: "active",
-    lastActive: "2023-04-06T09:50:00",
-    location: "Denver, USA",
-    department: "Finance",
-    position: "Financial Analyst",
-    joinDate: "2022-03-05",
-    twoFactorEnabled: true,
-  },
-  {
-    id: "user-008",
-    name: "Lisa Wilson",
-    email: "lisa.wilson@example.com",
-    phone: "+1 (555) 234-5678",
-    role: "user",
-    status: "locked",
-    lastActive: "2023-04-04T14:20:00",
-    location: "Boston, USA",
-    department: "Marketing",
-    position: "Marketing Specialist",
-    joinDate: "2022-06-20",
-    twoFactorEnabled: false,
-  },
-  {
-    id: "user-009",
-    name: "James Taylor",
-    email: "james.taylor@example.com",
-    phone: "+1 (555) 345-6789",
-    role: "user",
-    status: "active",
-    lastActive: "2023-04-06T10:10:00",
-    location: "Seattle, USA",
-    department: "Product",
-    position: "Product Manager",
-    joinDate: "2022-04-10",
-    twoFactorEnabled: true,
-  },
-  {
-    id: "user-010",
-    name: "Patricia Moore",
-    email: "patricia.moore@example.com",
-    phone: "+1 (555) 456-7890",
-    role: "user",
-    status: "active",
-    lastActive: "2023-04-06T09:30:00",
-    location: "Portland, USA",
-    department: "Customer Support",
-    position: "Support Specialist",
-    joinDate: "2022-05-15",
-    twoFactorEnabled: false,
-  },
-  {
-    id: "user-011",
-    name: "Thomas Anderson",
-    email: "thomas.anderson@example.com",
-    phone: "+1 (555) 567-8901",
-    role: "user",
-    status: "inactive",
-    lastActive: "2023-04-05T11:45:00",
-    location: "Phoenix, USA",
-    department: "Engineering",
-    position: "Software Engineer",
-    joinDate: "2022-07-01",
-    twoFactorEnabled: true,
-  },
-  {
-    id: "user-012",
-    name: "Jennifer White",
-    email: "jennifer.white@example.com",
-    phone: "+1 (555) 876-5432",
-    role: "security",
-    status: "active",
-    lastActive: "2023-04-06T10:05:00",
-    location: "Seattle, USA",
-    department: "Security",
-    position: "Security Analyst",
-    joinDate: "2022-04-15",
-    twoFactorEnabled: true,
-  },
-];
+import prisma from "@/lib/prisma";
 
 export async function GET(request: Request) {
   try {
@@ -181,59 +10,78 @@ export async function GET(request: Request) {
     const department = url.searchParams.get("department");
     const search = url.searchParams.get("search")?.toLowerCase();
 
-    let filteredUsers = [...users];
+    // Build the filter object for Prisma
+    const filter: any = {};
 
-    // Apply filters
     if (role) {
-      filteredUsers = filteredUsers.filter((user) => user.role === role);
+      filter.role = role;
     }
 
     if (status) {
-      filteredUsers = filteredUsers.filter((user) => user.status === status);
+      filter.status = status;
     }
 
     if (department) {
-      filteredUsers = filteredUsers.filter(
-        (user) => user.department === department,
-      );
+      filter.department = department;
     }
 
     if (search) {
-      filteredUsers = filteredUsers.filter(
-        (user) =>
-          user.name.toLowerCase().includes(search) ||
-          user.email.toLowerCase().includes(search) ||
-          user.role.toLowerCase().includes(search) ||
-          user.department.toLowerCase().includes(search),
-      );
+      filter.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { role: { contains: search, mode: "insensitive" } },
+        { department: { contains: search, mode: "insensitive" } },
+      ];
     }
+
+    // Fetch users with filters
+    const users = await prisma.user.findMany({
+      where: filter,
+      include: {
+        devices: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    // Add device count to each user
+    const usersWithDeviceCount = users.map((user) => ({
+      ...user,
+      deviceCount: user.devices.length,
+      devices: undefined, // Remove the devices array
+    }));
 
     // Calculate statistics
     const stats = {
-      total: filteredUsers.length,
-      active: filteredUsers.filter((user) => user.status === "active").length,
-      inactive: filteredUsers.filter((user) => user.status === "inactive")
-        .length,
-      locked: filteredUsers.filter((user) => user.status === "locked").length,
+      total: users.length,
+      active: users.filter((user) => user.status === "active").length,
+      inactive: users.filter((user) => user.status === "inactive").length,
+      locked: users.filter((user) => user.status === "locked").length,
       byRole: {} as Record<string, number>,
       byDepartment: {} as Record<string, number>,
     };
 
-    // Count users by role
-    filteredUsers.forEach((user) => {
-      if (!stats.byRole[user.role]) {
-        stats.byRole[user.role] = 0;
+    // Count users by role and department
+    users.forEach((user) => {
+      if (user.role) {
+        if (!stats.byRole[user.role]) {
+          stats.byRole[user.role] = 0;
+        }
+        stats.byRole[user.role]++;
       }
-      stats.byRole[user.role]++;
 
-      if (!stats.byDepartment[user.department]) {
-        stats.byDepartment[user.department] = 0;
+      if (user.department) {
+        if (!stats.byDepartment[user.department]) {
+          stats.byDepartment[user.department] = 0;
+        }
+        stats.byDepartment[user.department]++;
       }
-      stats.byDepartment[user.department]++;
     });
 
     return NextResponse.json({
-      users: filteredUsers,
+      users: usersWithDeviceCount,
       stats,
     });
   } catch (error) {
@@ -260,24 +108,44 @@ export async function POST(request: Request) {
     }
 
     // Check if email already exists
-    const emailExists = users.some((user) => user.email === userData.email);
-    if (emailExists) {
+    const existingUser = await prisma.user.findUnique({
+      where: { email: userData.email },
+    });
+
+    if (existingUser) {
       return NextResponse.json(
         { error: "Email already exists" },
         { status: 400 },
       );
     }
 
-    // In a real application, you would save to a database
-    // For this mock API, we'll just return success with the data
-    const newUser = {
-      id: `user-${Math.floor(Math.random() * 1000)}`,
-      ...userData,
-      status: userData.status || "active",
-      lastActive: new Date().toISOString(),
-      joinDate: new Date().toISOString(),
-      twoFactorEnabled: userData.twoFactorEnabled || false,
-    };
+    // Create the user
+    const newUser = await prisma.user.create({
+      data: {
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone,
+        role: userData.role,
+        status: userData.status || "active",
+        lastActive: userData.lastActive
+          ? new Date(userData.lastActive)
+          : new Date(),
+        location: userData.location,
+        department: userData.department,
+        position: userData.position,
+        joinDate: userData.joinDate ? new Date(userData.joinDate) : new Date(),
+        twoFactorEnabled: userData.twoFactorEnabled || false,
+      },
+    });
+
+    // Create default permissions for the user
+    await prisma.permission.create({
+      data: {
+        userId: newUser.id,
+        role: newUser.role,
+        permissions: getDefaultPermissions(newUser.role),
+      },
+    });
 
     return NextResponse.json({
       success: true,
@@ -290,5 +158,41 @@ export async function POST(request: Request) {
       { error: "Failed to create user" },
       { status: 500 },
     );
+  }
+}
+
+// Helper function to get default permissions based on role
+function getDefaultPermissions(role: string) {
+  switch (role) {
+    case "admin":
+      return {
+        dashboard: { view: true, edit: true },
+        users: { view: true, create: true, edit: true, delete: true },
+        devices: { view: true, create: true, edit: true, delete: true },
+        keylogs: { view: true, export: true, delete: true },
+        network: { view: true, configure: true },
+        security: { view: true, configure: true },
+        settings: { view: true, edit: true },
+      };
+    case "security":
+      return {
+        dashboard: { view: true, edit: false },
+        users: { view: true, create: false, edit: false, delete: false },
+        devices: { view: true, create: false, edit: false, delete: false },
+        keylogs: { view: true, export: true, delete: false },
+        network: { view: true, configure: false },
+        security: { view: true, configure: true },
+        settings: { view: false, edit: false },
+      };
+    default: // user
+      return {
+        dashboard: { view: true, edit: false },
+        users: { view: false, create: false, edit: false, delete: false },
+        devices: { view: true, create: false, edit: false, delete: false },
+        keylogs: { view: false, export: false, delete: false },
+        network: { view: false, configure: false },
+        security: { view: false, configure: false },
+        settings: { view: false, edit: false },
+      };
   }
 }

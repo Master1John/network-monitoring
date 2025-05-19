@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowUpDown, MoreHorizontal, Flag, Download, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,58 +22,40 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
-// Sample data
-const keylogs = [
-  {
-    id: "KL001",
-    device: "Workstation-001",
-    user: "john.doe",
-    timestamp: "2023-04-06T10:30:00",
-    type: "Application",
-    content: "Microsoft Word - Document1.docx",
-    flagged: false,
-  },
-  {
-    id: "KL002",
-    device: "Laptop-003",
-    user: "jane.smith",
-    timestamp: "2023-04-06T10:15:00",
-    type: "Browser",
-    content: "https://mail.google.com",
-    flagged: false,
-  },
-  {
-    id: "KL003",
-    device: "Desktop-007",
-    user: "robert.johnson",
-    timestamp: "2023-04-06T10:00:00",
-    type: "System",
-    content: "Login",
-    flagged: false,
-  },
-  {
-    id: "KL004",
-    device: "Laptop-005",
-    user: "sarah.williams",
-    timestamp: "2023-04-06T09:45:00",
-    type: "Browser",
-    content: "https://internal.company.com/sensitive",
-    flagged: true,
-  },
-  {
-    id: "KL005",
-    device: "Workstation-002",
-    user: "michael.brown",
-    timestamp: "2023-04-06T09:30:00",
-    type: "Application",
-    content: "Password Manager",
-    flagged: true,
-  },
-];
+type Keylog = {
+  id: string;
+  device: string;
+  user: string;
+  timestamp: string;
+  type: string;
+  content: string;
+  flagged: boolean;
+};
 
 export function KeylogTable() {
+  const [keylogs, setKeylogs] = useState<Keylog[]>([]);
+  const [loading, setLoading] = useState(true);
   const [sorting, setSorting] = useState<"asc" | "desc">("desc");
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function fetchKeylogs() {
+      try {
+        const response = await fetch("/api/keylogs");
+        const data = await response.json();
+
+        if (data.keylogs) {
+          setKeylogs(data.keylogs);
+        }
+      } catch (error) {
+        console.error("Failed to fetch keylogs:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchKeylogs();
+  }, []);
 
   const toggleSelectAll = () => {
     if (selectedRows.length === keylogs.length) {
@@ -99,6 +81,45 @@ export function KeylogTable() {
     }).format(date);
   };
 
+  const handleSort = () => {
+    const newSorting = sorting === "asc" ? "desc" : "asc";
+    setSorting(newSorting);
+
+    // Sort the keylogs based on timestamp
+    const sortedKeylogs = [...keylogs].sort((a, b) => {
+      const dateA = new Date(a.timestamp).getTime();
+      const dateB = new Date(b.timestamp).getTime();
+      return newSorting === "asc" ? dateA - dateB : dateB - dateA;
+    });
+
+    setKeylogs(sortedKeylogs);
+  };
+
+  const handleFlagSelected = async () => {
+    // In a real application, you would update the flagged status in the database
+    try {
+      // Update the UI optimistically
+      const updatedKeylogs = keylogs.map((keylog) =>
+        selectedRows.includes(keylog.id)
+          ? { ...keylog, flagged: true }
+          : keylog,
+      );
+      setKeylogs(updatedKeylogs);
+
+      // Reset selection
+      setSelectedRows([]);
+
+      // Here you would make API calls to update the flagged status in the database
+      // for each selected keylog
+    } catch (error) {
+      console.error("Failed to flag keylogs:", error);
+    }
+  };
+
+  if (loading) {
+    return <div>Loading keylog data...</div>;
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between py-4">
@@ -108,6 +129,7 @@ export function KeylogTable() {
             size="sm"
             className="h-8 gap-1"
             disabled={selectedRows.length === 0}
+            onClick={handleFlagSelected}
           >
             <Flag className="h-3.5 w-3.5" />
             <span>Flag Selected</span>
@@ -126,7 +148,7 @@ export function KeylogTable() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSorting(sorting === "asc" ? "desc" : "asc")}
+            onClick={handleSort}
             className="h-8 gap-1"
           >
             <ArrowUpDown className="h-3.5 w-3.5" />
@@ -208,6 +230,13 @@ export function KeylogTable() {
                 </TableCell>
               </TableRow>
             ))}
+            {keylogs.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={8} className="h-24 text-center">
+                  No keylog data found
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>

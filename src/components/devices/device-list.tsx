@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -35,91 +34,74 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Sample data
-const devices = [
-  {
-    id: "device-001",
-    name: "Router-Main",
-    type: "router",
-    ipAddress: "192.168.1.1",
-    macAddress: "00:1A:2B:3C:4D:5E",
-    status: "online",
-    lastSeen: "2023-04-06T10:45:00",
-    hasAlerts: false,
-  },
-  {
-    id: "device-002",
-    name: "Switch-Floor1",
-    type: "switch",
-    ipAddress: "192.168.1.2",
-    macAddress: "00:2B:3C:4D:5E:6F",
-    status: "online",
-    lastSeen: "2023-04-06T10:44:00",
-    hasAlerts: false,
-  },
-  {
-    id: "device-003",
-    name: "Workstation-001",
-    type: "workstation",
-    ipAddress: "192.168.1.101",
-    macAddress: "00:3C:4D:5E:6F:7G",
-    status: "online",
-    lastSeen: "2023-04-06T10:43:00",
-    hasAlerts: false,
-  },
-  {
-    id: "device-004",
-    name: "Laptop-003",
-    type: "laptop",
-    ipAddress: "192.168.1.103",
-    macAddress: "00:4D:5E:6F:7G:8H",
-    status: "offline",
-    lastSeen: "2023-04-06T09:15:00",
-    hasAlerts: false,
-  },
-  {
-    id: "device-005",
-    name: "Printer-Office",
-    type: "printer",
-    ipAddress: "192.168.1.201",
-    macAddress: "00:5E:6F:7G:8H:9I",
-    status: "online",
-    lastSeen: "2023-04-06T10:40:00",
-    hasAlerts: false,
-  },
-  {
-    id: "device-006",
-    name: "Server-Main",
-    type: "server",
-    ipAddress: "192.168.1.10",
-    macAddress: "00:6F:7G:8H:9I:0J",
-    status: "online",
-    lastSeen: "2023-04-06T10:42:00",
-    hasAlerts: true,
-  },
-  {
-    id: "device-007",
-    name: "Mobile-CEO",
-    type: "mobile",
-    ipAddress: "192.168.1.150",
-    macAddress: "00:7G:8H:9I:0J:1K",
-    status: "online",
-    lastSeen: "2023-04-06T10:30:00",
-    hasAlerts: true,
-  },
-];
+interface Device {
+  id: string;
+  name: string;
+  type: string;
+  ipAddress: string;
+  macAddress: string;
+  status: string;
+  lastSeen: string;
+  metrics: {
+    cpu: number;
+    memory: number;
+    disk: number;
+  };
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+interface DeviceStats {
+  total: number;
+  online: number;
+  offline: number;
+  byType: Record<string, number>;
+}
+
+interface DeviceResponse {
+  devices: Device[];
+  stats: DeviceStats;
+}
 
 export function DeviceList() {
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [stats, setStats] = useState<DeviceStats | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const filteredDevices = devices.filter(
-    (device) =>
-      device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      device.ipAddress.includes(searchTerm) ||
-      device.macAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      device.type.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const fetchDevices = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/devices${searchTerm ? `?search=${searchTerm}` : ""}`,
+      );
+      if (!response.ok) {
+        throw new Error(`Error fetching devices: ${response.statusText}`);
+      }
+      const data: DeviceResponse = await response.json();
+      setDevices(data.devices);
+      setStats(data.stats);
+    } catch (err) {
+      console.error("Failed to fetch devices:", err);
+      setError("Failed to load devices. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDevices();
+  }, []);
+
+  const handleSearch = () => {
+    fetchDevices();
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -144,20 +126,68 @@ export function DeviceList() {
     router.push(`/dashboard/devices/${deviceId}`);
   };
 
+  if (loading) {
+    return <div className="flex justify-center p-8">Loading devices...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center p-8">
+        <p className="text-red-500 mb-4">{error}</p>
+        <Button onClick={fetchDevices}>Retry</Button>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between py-4">
-        <Input
-          placeholder="Search devices..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-        <Button variant="outline" size="sm" className="ml-auto">
+        <div className="flex gap-2">
+          <Input
+            placeholder="Search devices..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          />
+          <Button variant="outline" onClick={handleSearch}>
+            Search
+          </Button>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto"
+          onClick={fetchDevices}
+        >
           <RefreshCw className="mr-2 h-4 w-4" />
           Refresh
         </Button>
       </div>
+
+      {stats && (
+        <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="bg-card rounded-lg p-4 shadow">
+            <p className="text-sm text-muted-foreground">Total Devices</p>
+            <p className="text-2xl font-bold">{stats.total}</p>
+          </div>
+          <div className="bg-card rounded-lg p-4 shadow">
+            <p className="text-sm text-muted-foreground">Online</p>
+            <p className="text-2xl font-bold text-green-500">{stats.online}</p>
+          </div>
+          <div className="bg-card rounded-lg p-4 shadow">
+            <p className="text-sm text-muted-foreground">Offline</p>
+            <p className="text-2xl font-bold text-gray-500">{stats.offline}</p>
+          </div>
+          <div className="bg-card rounded-lg p-4 shadow">
+            <p className="text-sm text-muted-foreground">Device Types</p>
+            <p className="text-2xl font-bold">
+              {Object.keys(stats.byType).length}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -176,68 +206,76 @@ export function DeviceList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredDevices.map((device) => (
-              <TableRow
-                key={device.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => handleViewDevice(device.id)}
-              >
-                <TableCell className="font-medium">
-                  <div className="flex items-center space-x-2">
-                    {getDeviceIcon(device.type)}
-                    <span>{device.name}</span>
-                    {device.hasAlerts && (
-                      <AlertTriangle className="h-4 w-4 text-destructive" />
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="capitalize">{device.type}</TableCell>
-                <TableCell>{device.ipAddress}</TableCell>
-                <TableCell>
-                  {device.status === "online" ? (
-                    <Badge className="bg-green-500 hover:bg-green-600">
-                      <Wifi className="mr-1 h-3 w-3" />
-                      Online
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline">
-                      <WifiOff className="mr-1 h-3 w-3" />
-                      Offline
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell>{formatDate(device.lastSeen)}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      asChild
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewDevice(device.id);
-                        }}
-                      >
-                        <Eye className="mr-2 h-4 w-4" />
-                        <span>View Details</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
-                        <span>Configure</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+            {devices.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  No devices found
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              devices.map((device) => (
+                <TableRow
+                  key={device.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleViewDevice(device.id)}
+                >
+                  <TableCell className="font-medium">
+                    <div className="flex items-center space-x-2">
+                      {getDeviceIcon(device.type)}
+                      <span>{device.name}</span>
+                      {device.metrics && device.metrics.cpu > 80 && (
+                        <AlertTriangle className="h-4 w-4 text-destructive" />
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="capitalize">{device.type}</TableCell>
+                  <TableCell>{device.ipAddress}</TableCell>
+                  <TableCell>
+                    {device.status === "online" ? (
+                      <Badge className="bg-green-500 hover:bg-green-600">
+                        <Wifi className="mr-1 h-3 w-3" />
+                        Online
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline">
+                        <WifiOff className="mr-1 h-3 w-3" />
+                        Offline
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>{formatDate(device.lastSeen)}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        asChild
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Open menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDevice(device.id);
+                          }}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          <span>View Details</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                          <span>Configure</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

@@ -75,17 +75,17 @@ export default function DeviceDetailPage({
               </CardContent>
             </Card>
           </div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance Overview</CardTitle>
-              <CardDescription>Resource usage over time</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Suspense fallback={<div>Loading performance data...</div>}>
-                <DevicePerformance deviceId={deviceId} />
-              </Suspense>
-            </CardContent>
-          </Card>
+          {/* <Card> */}
+          {/*   <CardHeader> */}
+          {/*     <CardTitle>Performance Overview</CardTitle> */}
+          {/*     <CardDescription>Resource usage over time</CardDescription> */}
+          {/*   </CardHeader> */}
+          {/*   <CardContent> */}
+          {/*     <Suspense fallback={<div>Loading performance data...</div>}> */}
+          {/*       <DevicePerformance deviceId={deviceId} /> */}
+          {/*     </Suspense> */}
+          {/*   </CardContent> */}
+          {/* </Card> */}
         </TabsContent>
 
         <TabsContent value="keylogs" className="space-y-4">

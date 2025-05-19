@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  email            String         @unique
+  phone            String?
+  role             String         @default("user") // admin, user, security
+  status           String         @default("active") // active, inactive, locked
+  lastActive       DateTime       @default(now())
+  location         String?
+  department       String?
+  position         String?
+  joinDate         DateTime       @default(now())
+  twoFactorEnabled Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  devices          Device[]       @relation("UserDevices")
+  activities       UserActivity[] @relation("UserActivities")
+  loginHistory     LoginHistory[] @relation("UserLoginHistory")
+  permissions      Permission?    @relation("UserPermissions")
+}
+
+model Device {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  type          String // server, workstation, laptop, mobile, router, switch, etc.
+  ipAddress     String
+  macAddress    String?
+  status        String          @default("online") // online, offline
+  lastSeen      DateTime        @default(now())
+  os            String?
+  manufacturer  String?
+  model         String?
+  installedDate DateTime?
+  metrics       Json? // CPU, memory, disk usage
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  userId        String?         @db.ObjectId
+  user          User?           @relation("UserDevices", fields: [userId], references: [id], onDelete: SetNull)
+  keylogs       Keylog[]        @relation("DeviceKeylogs")
+  packets       NetworkPacket[] @relation("DevicePackets")
+}
+
+model Keylog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  type      String // Application, Browser, System
+  content   String
+  flagged   Boolean  @default(false)
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deviceId  String   @db.ObjectId
+  device    Device   @relation("DeviceKeylogs", fields: [deviceId], references: [id], onDelete: Cascade)
+}
+
+model NetworkPacket {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  source      String
+  destination String
+  protocol    String
+  port        Int?
+  size        Int?
+  direction   String // inbound, outbound
+  status      String   @default("success") // success, blocked
+  timestamp   DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deviceId    String   @db.ObjectId
+  device      Device   @relation("DevicePackets", fields: [deviceId], references: [id], onDelete: Cascade)
+}
+
+model UserActivity {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  action    String // login, settings, security, user, device, locked
+  details   String
+  severity  String   @default("info") // info, warning, critical
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String   @db.ObjectId
+  user      User     @relation("UserActivities", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LoginHistory {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  ipAddress String
+  location  String?
+  device    String
+  status    String // success, failed
+  twoFactor Boolean  @default(false)
+  reason    String?
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String   @db.ObjectId
+  user      User     @relation("UserLoginHistory", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Permission {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  role        String
+  permissions Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String   @unique @db.ObjectId
+  user        User     @relation("UserPermissions", fields: [userId], references: [id], onDelete: Cascade)
+}

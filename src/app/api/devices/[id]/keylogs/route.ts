@@ -1,149 +1,5 @@
 import { NextResponse } from "next/server";
-
-// Sample keylog data by device
-const deviceKeylogs = {
-  "device-003": [
-    {
-      id: "KL001",
-      timestamp: "2023-04-06T10:30:00",
-      type: "Application",
-      content: "Microsoft Word - Document1.docx",
-      flagged: false,
-    },
-    {
-      id: "KL005",
-      timestamp: "2023-04-06T10:25:00",
-      type: "Browser",
-      content: "https://mail.google.com",
-      flagged: false,
-    },
-    {
-      id: "KL009",
-      timestamp: "2023-04-06T10:20:00",
-      type: "System",
-      content: "Login",
-      flagged: false,
-    },
-    {
-      id: "KL013",
-      timestamp: "2023-04-06T10:15:00",
-      type: "Application",
-      content: "Microsoft Excel - Budget2023.xlsx",
-      flagged: false,
-    },
-    {
-      id: "KL017",
-      timestamp: "2023-04-06T10:10:00",
-      type: "Browser",
-      content: "https://internal.company.com/reports",
-      flagged: false,
-    },
-    {
-      id: "KL021",
-      timestamp: "2023-04-06T10:05:00",
-      type: "Application",
-      content: "Password Manager",
-      flagged: true,
-    },
-    {
-      id: "KL025",
-      timestamp: "2023-04-06T10:00:00",
-      type: "System",
-      content: "Startup",
-      flagged: false,
-    },
-  ],
-  "device-004": [
-    {
-      id: "KL002",
-      timestamp: "2023-04-06T09:45:00",
-      type: "Browser",
-      content: "https://internal.company.com/sensitive",
-      flagged: true,
-    },
-    {
-      id: "KL006",
-      timestamp: "2023-04-06T09:40:00",
-      type: "Application",
-      content: "Adobe Photoshop",
-      flagged: false,
-    },
-    {
-      id: "KL010",
-      timestamp: "2023-04-06T09:35:00",
-      type: "System",
-      content: "Login",
-      flagged: false,
-    },
-  ],
-  "device-006": [
-    {
-      id: "KL003",
-      timestamp: "2023-04-06T10:40:00",
-      type: "System",
-      content: "Database backup",
-      flagged: false,
-    },
-    {
-      id: "KL007",
-      timestamp: "2023-04-06T10:35:00",
-      type: "Application",
-      content: "MySQL Workbench",
-      flagged: false,
-    },
-    {
-      id: "KL011",
-      timestamp: "2023-04-06T10:30:00",
-      type: "System",
-      content: "Service restart: nginx",
-      flagged: false,
-    },
-    {
-      id: "KL015",
-      timestamp: "2023-04-06T10:25:00",
-      type: "System",
-      content: "Failed login attempt: root",
-      flagged: true,
-    },
-    {
-      id: "KL019",
-      timestamp: "2023-04-06T10:20:00",
-      type: "System",
-      content: "Failed login attempt: admin",
-      flagged: true,
-    },
-    {
-      id: "KL023",
-      timestamp: "2023-04-06T10:15:00",
-      type: "System",
-      content: "Failed login attempt: administrator",
-      flagged: true,
-    },
-  ],
-  "device-007": [
-    {
-      id: "KL004",
-      timestamp: "2023-04-06T10:20:00",
-      type: "Application",
-      content: "Email - Confidential Report",
-      flagged: true,
-    },
-    {
-      id: "KL008",
-      timestamp: "2023-04-06T10:15:00",
-      type: "Browser",
-      content: "https://finance.company.com/reports",
-      flagged: false,
-    },
-    {
-      id: "KL012",
-      timestamp: "2023-04-06T10:10:00",
-      type: "Application",
-      content: "Messages - SMS to +1234567890",
-      flagged: false,
-    },
-  ],
-};
+import prisma from "@/lib/prisma";
 
 export async function GET(
   request: Request,
@@ -157,42 +13,45 @@ export async function GET(
     const type = url.searchParams.get("type");
     const flagged = url.searchParams.get("flagged");
     const limit = url.searchParams.get("limit")
-      ? parseInt(url.searchParams.get("limit")!)
+      ? Number.parseInt(url.searchParams.get("limit")!)
       : undefined;
 
-    // Get keylogs for the device
-    const keylogs = deviceKeylogs[deviceId as keyof typeof deviceKeylogs] || [];
+    // Check if device exists
+    const device = await prisma.device.findUnique({
+      where: { id: deviceId },
+    });
 
-    // Apply filters
-    let filteredKeylogs = [...keylogs];
+    if (!device) {
+      return NextResponse.json({ error: "Device not found" }, { status: 404 });
+    }
+
+    // Build the filter object for Prisma
+    const filter: any = { deviceId };
 
     if (type) {
-      filteredKeylogs = filteredKeylogs.filter(
-        (keylog) => keylog.type.toLowerCase() === type.toLowerCase(),
-      );
+      filter.type = type;
     }
 
-    if (flagged) {
-      const isFlagged = flagged === "true";
-      filteredKeylogs = filteredKeylogs.filter(
-        (keylog) => keylog.flagged === isFlagged,
-      );
+    if (flagged !== null) {
+      filter.flagged = flagged === "true";
     }
 
-    // Apply limit if specified
-    if (limit && limit > 0) {
-      filteredKeylogs = filteredKeylogs.slice(0, limit);
-    }
+    // Fetch keylogs with filters
+    const keylogs = await prisma.keylog.findMany({
+      where: filter,
+      orderBy: { timestamp: "desc" },
+      take: limit,
+    });
 
     // Calculate statistics
     const stats = {
-      total: filteredKeylogs.length,
-      flagged: filteredKeylogs.filter((keylog) => keylog.flagged).length,
+      total: keylogs.length,
+      flagged: keylogs.filter((keylog) => keylog.flagged).length,
       byType: {} as Record<string, number>,
     };
 
     // Count keylogs by type
-    filteredKeylogs.forEach((keylog) => {
+    keylogs.forEach((keylog) => {
       if (!stats.byType[keylog.type]) {
         stats.byType[keylog.type] = 0;
       }
@@ -200,7 +59,7 @@ export async function GET(
     });
 
     return NextResponse.json({
-      keylogs: filteredKeylogs,
+      keylogs,
       stats,
     });
   } catch (error) {
@@ -228,14 +87,27 @@ export async function POST(
       );
     }
 
-    // In a real application, you would save to a database
-    // For this mock API, we'll just return success with the data
-    const newKeylog = {
-      id: `KL${Math.floor(Math.random() * 1000)}`,
-      timestamp: new Date().toISOString(),
-      flagged: keylogData.flagged || false,
-      ...keylogData,
-    };
+    // Check if device exists
+    const device = await prisma.device.findUnique({
+      where: { id: deviceId },
+    });
+
+    if (!device) {
+      return NextResponse.json({ error: "Device not found" }, { status: 404 });
+    }
+
+    // Create the keylog entry
+    const newKeylog = await prisma.keylog.create({
+      data: {
+        type: keylogData.type,
+        content: keylogData.content,
+        flagged: keylogData.flagged || false,
+        timestamp: keylogData.timestamp
+          ? new Date(keylogData.timestamp)
+          : new Date(),
+        deviceId,
+      },
+    });
 
     return NextResponse.json({
       success: true,

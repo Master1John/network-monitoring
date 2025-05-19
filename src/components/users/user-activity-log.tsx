@@ -2,306 +2,258 @@
 
 import { useEffect, useState } from "react";
 import {
-  Activity,
-  AlertTriangle,
-  ArrowUpDown,
-  Clock,
-  Filter,
-  Laptop,
+  CircleCheck,
+  CircleX,
   Lock,
-  MoreHorizontal,
-  Settings,
+  Mail,
+  MapPin,
+  Phone,
+  Shield,
+  ShieldAlert,
   User,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-// Sample user activity data
-const userActivityData = {
-  "user-001": [
-    {
-      id: "act-001",
-      action: "login",
-      details: "Logged in from 192.168.1.101",
-      timestamp: "2023-04-06T10:45:00",
-      severity: "info",
-    },
-    {
-      id: "act-008",
-      action: "settings",
-      details: "Updated network monitoring rules",
-      timestamp: "2023-04-06T10:10:00",
-      severity: "info",
-    },
-    {
-      id: "act-011",
-      action: "device",
-      details: "Added new device: Server-Main",
-      timestamp: "2023-04-06T09:55:00",
-      severity: "info",
-    },
-    {
-      id: "act-015",
-      action: "security",
-      details: "Reviewed security alerts",
-      timestamp: "2023-04-06T09:30:00",
-      severity: "info",
-    },
-    {
-      id: "act-020",
-      action: "login",
-      details: "Logged in from 192.168.1.101",
-      timestamp: "2023-04-05T08:45:00",
-      severity: "info",
-    },
-  ],
-  "user-002": [
-    {
-      id: "act-003",
-      action: "user",
-      details: "Created new user account for Thomas Anderson",
-      timestamp: "2023-04-06T10:35:00",
-      severity: "info",
-    },
-    {
-      id: "act-010",
-      action: "login",
-      details: "Logged in from new location: 203.0.113.42",
-      timestamp: "2023-04-06T10:00:00",
-      severity: "warning",
-    },
-  ],
-  "user-003": [
-    {
-      id: "act-002",
-      action: "settings",
-      details: "Changed security settings",
-      timestamp: "2023-04-06T10:40:00",
-      severity: "info",
-    },
-    {
-      id: "act-009",
-      action: "security",
-      details: "Enabled two-factor authentication",
-      timestamp: "2023-04-06T10:05:00",
-      severity: "info",
-    },
-  ],
-  "user-008": [
-    {
-      id: "act-004",
-      action: "login",
-      details: "Failed login attempt (3rd attempt)",
-      timestamp: "2023-04-06T10:30:00",
-      severity: "warning",
-    },
-    {
-      id: "act-006",
-      action: "locked",
-      details: "Account locked due to multiple failed login attempts",
-      timestamp: "2023-04-06T10:20:00",
-      severity: "critical",
-    },
-  ],
-  "user-012": [
-    {
-      id: "act-005",
-      action: "security",
-      details: "Reset password for user Michael Brown",
-      timestamp: "2023-04-06T10:25:00",
-      severity: "info",
-    },
-  ],
+type UserProfileData = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  status: string;
+  lastActive: string;
+  location: string;
+  department: string;
+  position: string;
+  joinDate: string;
+  twoFactorEnabled: boolean;
 };
 
-export function UserActivityLog({
-  userId,
-  limit,
-}: {
-  userId: string;
-  limit?: number;
-}) {
-  const [activities, setActivities] = useState<any[]>([]);
+export function UserProfile({ userId }: { userId: string }) {
+  const [user, setUser] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const userActivities =
-        userActivityData[userId as keyof typeof userActivityData] || [];
-      setActivities(limit ? userActivities.slice(0, limit) : userActivities);
-      setLoading(false);
-    }, 500);
-  }, [userId, limit]);
+    async function fetchUserProfile() {
+      try {
+        const response = await fetch(`/api/users/${userId}`);
+        const data = await response.json();
 
-  const filteredActivities =
-    filter === "all"
-      ? activities
-      : activities.filter((activity) => activity.severity === filter);
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-US", {
-      dateStyle: "short",
-      timeStyle: "short",
-    }).format(date);
-  };
-
-  const getActionIcon = (action: string) => {
-    switch (action) {
-      case "login":
-        return <User className="h-4 w-4" />;
-      case "settings":
-        return <Settings className="h-4 w-4" />;
-      case "security":
-        return <AlertTriangle className="h-4 w-4" />;
-      case "user":
-        return <User className="h-4 w-4" />;
-      case "device":
-        return <Laptop className="h-4 w-4" />;
-      case "locked":
-        return <Lock className="h-4 w-4" />;
-      default:
-        return <Activity className="h-4 w-4" />;
+        if (data.user) {
+          setUser(data.user);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user profile:", error);
+      } finally {
+        setLoading(false);
+      }
     }
-  };
 
-  const getSeverityBadge = (severity: string) => {
-    switch (severity) {
-      case "critical":
-        return <Badge variant="destructive">Critical</Badge>;
-      case "warning":
-        return (
-          <Badge variant="outline" className="border-amber-500 text-amber-500">
-            Warning
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">Info</Badge>;
+    if (userId) {
+      fetchUserProfile();
+    }
+  }, [userId]);
+
+  const handleLockUnlock = async () => {
+    if (!user) return;
+
+    try {
+      const newStatus = user.status === "locked" ? "active" : "locked";
+
+      const response = await fetch(`/api/users/${userId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: newStatus,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUser({
+          ...user,
+          status: newStatus,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update user status:", error);
     }
   };
 
   if (loading) {
-    return <div>Loading activity log...</div>;
+    return <div>Loading user profile...</div>;
   }
 
-  if (activities.length === 0) {
-    return <div>No activity log found for this user.</div>;
+  if (!user) {
+    return <div>User not found</div>;
   }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("en-US", {
+      dateStyle: "medium",
+    }).format(date);
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  };
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case "admin":
+        return <Shield className="h-5 w-5 text-primary" />;
+      case "security":
+        return <ShieldAlert className="h-5 w-5 text-destructive" />;
+      default:
+        return <User className="h-5 w-5 text-muted-foreground" />;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return (
+          <Badge variant="outline" className="border-green-500 text-green-500">
+            <CircleCheck className="mr-1 h-3 w-3" />
+            Active
+          </Badge>
+        );
+      case "inactive":
+        return (
+          <Badge variant="outline" className="border-amber-500 text-amber-500">
+            <CircleX className="mr-1 h-3 w-3" />
+            Inactive
+          </Badge>
+        );
+      case "locked":
+        return (
+          <Badge variant="destructive">
+            <Lock className="mr-1 h-3 w-3" />
+            Locked
+          </Badge>
+        );
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
 
   return (
-    <div>
-      {!limit && (
-        <div className="flex items-center justify-between py-4">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">Filter:</span>
-            <Button
-              variant={filter === "all" ? "default" : "outline"}
-              size="sm"
-              className="h-8"
-              onClick={() => setFilter("all")}
-            >
-              All
-            </Button>
-            <Button
-              variant={filter === "critical" ? "default" : "outline"}
-              size="sm"
-              className="h-8"
-              onClick={() => setFilter("critical")}
-            >
-              Critical
-            </Button>
-            <Button
-              variant={filter === "warning" ? "default" : "outline"}
-              size="sm"
-              className="h-8"
-              onClick={() => setFilter("warning")}
-            >
-              Warning
-            </Button>
-            <Button
-              variant={filter === "info" ? "default" : "outline"}
-              size="sm"
-              className="h-8"
-              onClick={() => setFilter("info")}
-            >
-              Info
-            </Button>
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex flex-col gap-6 md:flex-row">
+          <div className="flex items-start gap-4">
+            <Avatar className="h-16 w-16">
+              <AvatarFallback className="text-xl">
+                {getInitials(user.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h3 className="text-2xl font-bold">{user.name}</h3>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  {getRoleIcon(user.role)}
+                  <span className="capitalize">{user.role}</span>
+                </div>
+                {getStatusBadge(user.status)}
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {user.position} • {user.department}
+              </p>
+            </div>
+          </div>
+
+          <div className="ml-auto flex flex-col items-end gap-2">
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                Reset Password
+              </Button>
+              {user.status === "locked" ? (
+                <Button variant="default" size="sm" onClick={handleLockUnlock}>
+                  Unlock Account
+                </Button>
+              ) : (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleLockUnlock}
+                >
+                  Lock Account
+                </Button>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Member since {formatDate(user.joinDate)}
+            </p>
           </div>
         </div>
-      )}
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <div className="flex items-center space-x-1">
-                  <span>Time</span>
-                  <ArrowUpDown className="h-3 w-3" />
-                </div>
-              </TableHead>
-              <TableHead>Action</TableHead>
-              <TableHead>Details</TableHead>
-              <TableHead>Severity</TableHead>
-              {!limit && <TableHead className="w-[50px]"></TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredActivities.map((activity) => (
-              <TableRow key={activity.id}>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    {formatDate(activity.timestamp)}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    {getActionIcon(activity.action)}
-                    <span className="capitalize">{activity.action}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="max-w-[300px] truncate">
-                  {activity.details}
-                </TableCell>
-                <TableCell>{getSeverityBadge(activity.severity)}</TableCell>
-                {!limit && (
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+        <div className="mt-6 grid gap-4 border-t pt-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-muted p-2">
+              <Mail className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Email</p>
+              <p className="font-medium">{user.email}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-muted p-2">
+              <Phone className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Phone</p>
+              <p className="font-medium">{user.phone}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-muted p-2">
+              <MapPin className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Location</p>
+              <p className="font-medium">{user.location}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-muted p-2">
+              <Shield className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">
+                Two-Factor Authentication
+              </p>
+              <p className="font-medium">
+                {user.twoFactorEnabled ? "Enabled" : "Disabled"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-muted p-2">
+              <User className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Last Active</p>
+              <p className="font-medium">{formatDate(user.lastActive)}</p>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

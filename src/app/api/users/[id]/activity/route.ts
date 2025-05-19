@@ -1,102 +1,5 @@
 import { NextResponse } from "next/server";
-
-// Sample user activity data
-const userActivityData = {
-  "user-001": [
-    {
-      id: "act-001",
-      action: "login",
-      details: "Logged in from 192.168.1.101",
-      timestamp: "2023-04-06T10:45:00",
-      severity: "info",
-    },
-    {
-      id: "act-008",
-      action: "settings",
-      details: "Updated network monitoring rules",
-      timestamp: "2023-04-06T10:10:00",
-      severity: "info",
-    },
-    {
-      id: "act-011",
-      action: "device",
-      details: "Added new device: Server-Main",
-      timestamp: "2023-04-06T09:55:00",
-      severity: "info",
-    },
-    {
-      id: "act-015",
-      action: "security",
-      details: "Reviewed security alerts",
-      timestamp: "2023-04-06T09:30:00",
-      severity: "info",
-    },
-    {
-      id: "act-020",
-      action: "login",
-      details: "Logged in from 192.168.1.101",
-      timestamp: "2023-04-05T08:45:00",
-      severity: "info",
-    },
-  ],
-  "user-002": [
-    {
-      id: "act-003",
-      action: "user",
-      details: "Created new user account for Thomas Anderson",
-      timestamp: "2023-04-06T10:35:00",
-      severity: "info",
-    },
-    {
-      id: "act-010",
-      action: "login",
-      details: "Logged in from new location: 203.0.113.42",
-      timestamp: "2023-04-06T10:00:00",
-      severity: "warning",
-    },
-  ],
-  "user-003": [
-    {
-      id: "act-002",
-      action: "settings",
-      details: "Changed security settings",
-      timestamp: "2023-04-06T10:40:00",
-      severity: "info",
-    },
-    {
-      id: "act-009",
-      action: "security",
-      details: "Enabled two-factor authentication",
-      timestamp: "2023-04-06T10:05:00",
-      severity: "info",
-    },
-  ],
-  "user-008": [
-    {
-      id: "act-004",
-      action: "login",
-      details: "Failed login attempt (3rd attempt)",
-      timestamp: "2023-04-06T10:30:00",
-      severity: "warning",
-    },
-    {
-      id: "act-006",
-      action: "locked",
-      details: "Account locked due to multiple failed login attempts",
-      timestamp: "2023-04-06T10:20:00",
-      severity: "critical",
-    },
-  ],
-  "user-012": [
-    {
-      id: "act-005",
-      action: "security",
-      details: "Reset password for user Michael Brown",
-      timestamp: "2023-04-06T10:25:00",
-      severity: "info",
-    },
-  ],
-};
+import prisma from "@/lib/prisma";
 
 export async function GET(
   request: Request,
@@ -113,49 +16,51 @@ export async function GET(
       ? Number.parseInt(url.searchParams.get("limit")!)
       : undefined;
 
-    // Get activities for the user
-    const activities =
-      userActivityData[userId as keyof typeof userActivityData] || [];
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
 
-    // Apply filters
-    let filteredActivities = [...activities];
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Build the filter object for Prisma
+    const filter: any = { userId };
 
     if (action) {
-      filteredActivities = filteredActivities.filter(
-        (activity) => activity.action === action,
-      );
+      filter.action = action;
     }
 
     if (severity) {
-      filteredActivities = filteredActivities.filter(
-        (activity) => activity.severity === severity,
-      );
+      filter.severity = severity;
     }
 
-    // Apply limit if specified
-    if (limit && limit > 0) {
-      filteredActivities = filteredActivities.slice(0, limit);
-    }
+    // Fetch activities with filters
+    const activities = await prisma.userActivity.findMany({
+      where: filter,
+      orderBy: { timestamp: "desc" },
+      take: limit,
+    });
 
     // Calculate statistics
     const stats = {
-      total: filteredActivities.length,
+      total: activities.length,
       byAction: {} as Record<string, number>,
       bySeverity: {
-        info: filteredActivities.filter(
-          (activity) => activity.severity === "info",
-        ).length,
-        warning: filteredActivities.filter(
+        info: activities.filter((activity) => activity.severity === "info")
+          .length,
+        warning: activities.filter(
           (activity) => activity.severity === "warning",
         ).length,
-        critical: filteredActivities.filter(
+        critical: activities.filter(
           (activity) => activity.severity === "critical",
         ).length,
       },
     };
 
     // Count activities by action
-    filteredActivities.forEach((activity) => {
+    activities.forEach((activity) => {
       if (!stats.byAction[activity.action]) {
         stats.byAction[activity.action] = 0;
       }
@@ -163,7 +68,7 @@ export async function GET(
     });
 
     return NextResponse.json({
-      activities: filteredActivities,
+      activities,
       stats,
     });
   } catch (error) {
@@ -191,14 +96,27 @@ export async function POST(
       );
     }
 
-    // In a real application, you would save to a database
-    // For this mock API, we'll just return success with the data
-    const newActivity = {
-      id: `act-${Math.floor(Math.random() * 1000)}`,
-      timestamp: new Date().toISOString(),
-      severity: activityData.severity || "info",
-      ...activityData,
-    };
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Create the activity
+    const newActivity = await prisma.userActivity.create({
+      data: {
+        action: activityData.action,
+        details: activityData.details,
+        severity: activityData.severity || "info",
+        timestamp: activityData.timestamp
+          ? new Date(activityData.timestamp)
+          : new Date(),
+        userId,
+      },
+    });
 
     return NextResponse.json({
       success: true,

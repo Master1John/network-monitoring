@@ -15,123 +15,74 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
-// Mock device data - in a real app, this would come from an API
-const deviceData = {
-  "device-001": {
-    id: "device-001",
-    name: "Router-Main",
-    type: "router",
-    ipAddress: "192.168.1.1",
-    macAddress: "00:1A:2B:3C:4D:5E",
-    status: "online",
-    lastSeen: "2023-04-06T10:45:00",
-    os: "RouterOS 6.48.3",
-    manufacturer: "MikroTik",
-    model: "RB4011iGS+",
-    installedDate: "2022-01-15",
-    metrics: {
-      cpu: 15,
-      memory: 30,
-      disk: 45,
-    },
-  },
-  "device-003": {
-    id: "device-003",
-    name: "Workstation-001",
-    type: "workstation",
-    ipAddress: "192.168.1.101",
-    macAddress: "00:3C:4D:5E:6F:7G",
-    status: "online",
-    lastSeen: "2023-04-06T10:43:00",
-    os: "Windows 11 Pro",
-    manufacturer: "Dell",
-    model: "OptiPlex 7090",
-    installedDate: "2022-03-10",
-    metrics: {
-      cpu: 42,
-      memory: 65,
-      disk: 58,
-    },
-  },
-  "device-004": {
-    id: "device-004",
-    name: "Laptop-003",
-    type: "laptop",
-    ipAddress: "192.168.1.103",
-    macAddress: "00:4D:5E:6F:7G:8H",
-    status: "offline",
-    lastSeen: "2023-04-06T09:15:00",
-    os: "macOS Monterey",
-    manufacturer: "Apple",
-    model: "MacBook Pro 16-inch",
-    installedDate: "2021-11-05",
-    metrics: {
-      cpu: 0,
-      memory: 0,
-      disk: 72,
-    },
-  },
-  "device-006": {
-    id: "device-006",
-    name: "Server-Main",
-    type: "server",
-    ipAddress: "192.168.1.10",
-    macAddress: "00:6F:7G:8H:9I:0J",
-    status: "online",
-    lastSeen: "2023-04-06T10:42:00",
-    os: "Ubuntu Server 22.04 LTS",
-    manufacturer: "HP",
-    model: "ProLiant DL380 Gen10",
-    installedDate: "2022-02-20",
-    metrics: {
-      cpu: 78,
-      memory: 85,
-      disk: 62,
-    },
-    hasAlerts: true,
-  },
-  "device-007": {
-    id: "device-007",
-    name: "Mobile-CEO",
-    type: "mobile",
-    ipAddress: "192.168.1.150",
-    macAddress: "00:7G:8H:9I:0J:1K",
-    status: "online",
-    lastSeen: "2023-04-06T10:30:00",
-    os: "iOS 16.2",
-    manufacturer: "Apple",
-    model: "iPhone 14 Pro",
-    installedDate: "2022-09-25",
-    metrics: {
-      cpu: 35,
-      memory: 48,
-      disk: 75,
-    },
-    hasAlerts: true,
-  },
-};
+interface DeviceMetrics {
+  cpu: number;
+  memory: number;
+  disk: number;
+  battery?: number;
+}
+
+interface Device {
+  id: string;
+  name: string;
+  type: string;
+  ipAddress: string;
+  macAddress: string;
+  status: string;
+  lastSeen: string;
+  os: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  installedDate: string | null;
+  metrics: DeviceMetrics;
+  userId: string | null;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
 
 export function DeviceInfo({ deviceId }: { deviceId: string }) {
-  const [device, setDevice] = useState<any>(null);
+  const [device, setDevice] = useState<Device | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setDevice(deviceData[deviceId as keyof typeof deviceData] || null);
-      setLoading(false);
-    }, 500);
+    const fetchDevice = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/devices/${deviceId}`);
+        if (!response.ok) {
+          throw new Error(`Error fetching device: ${response.statusText}`);
+        }
+        const data = await response.json();
+        setDevice(data.device);
+      } catch (err) {
+        console.error("Failed to fetch device:", err);
+        setError("Failed to load device information. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDevice();
   }, [deviceId]);
 
   if (loading) {
     return <div>Loading device information...</div>;
   }
 
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
+  }
+
   if (!device) {
     return <div>Device not found</div>;
   }
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
     return new Intl.DateTimeFormat("en-US", {
       dateStyle: "medium",
@@ -163,7 +114,7 @@ export function DeviceInfo({ deviceId }: { deviceId: string }) {
             <div>
               <h3 className="text-2xl font-bold flex items-center gap-2">
                 {device.name}
-                {device.hasAlerts && (
+                {device.metrics && device.metrics.cpu > 80 && (
                   <AlertTriangle className="h-5 w-5 text-destructive" />
                 )}
               </h3>
@@ -199,15 +150,15 @@ export function DeviceInfo({ deviceId }: { deviceId: string }) {
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Operating System</p>
-              <p className="font-medium">{device.os}</p>
+              <p className="font-medium">{device.os || "N/A"}</p>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Manufacturer</p>
-              <p className="font-medium">{device.manufacturer}</p>
+              <p className="font-medium">{device.manufacturer || "N/A"}</p>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Model</p>
-              <p className="font-medium">{device.model}</p>
+              <p className="font-medium">{device.model || "N/A"}</p>
             </div>
           </div>
         </div>
@@ -222,12 +173,18 @@ export function DeviceInfo({ deviceId }: { deviceId: string }) {
               <div className="flex items-center gap-2">
                 <div className="h-2 w-24 rounded-full bg-muted">
                   <div
-                    className={`h-full rounded-full ${device.metrics.cpu > 80 ? "bg-destructive" : "bg-primary"}`}
-                    style={{ width: `${device.metrics.cpu}%` }}
+                    className={`h-full rounded-full ${
+                      device.metrics && device.metrics.cpu > 80
+                        ? "bg-destructive"
+                        : "bg-primary"
+                    }`}
+                    style={{
+                      width: `${device.metrics ? device.metrics.cpu : 0}%`,
+                    }}
                   />
                 </div>
                 <span className="text-sm font-medium">
-                  {device.metrics.cpu}%
+                  {device.metrics ? device.metrics.cpu : 0}%
                 </span>
               </div>
             </div>
@@ -242,12 +199,18 @@ export function DeviceInfo({ deviceId }: { deviceId: string }) {
               <div className="flex items-center gap-2">
                 <div className="h-2 w-24 rounded-full bg-muted">
                   <div
-                    className={`h-full rounded-full ${device.metrics.memory > 80 ? "bg-destructive" : "bg-secondary"}`}
-                    style={{ width: `${device.metrics.memory}%` }}
+                    className={`h-full rounded-full ${
+                      device.metrics && device.metrics.memory > 80
+                        ? "bg-destructive"
+                        : "bg-secondary"
+                    }`}
+                    style={{
+                      width: `${device.metrics ? device.metrics.memory : 0}%`,
+                    }}
                   />
                 </div>
                 <span className="text-sm font-medium">
-                  {device.metrics.memory}%
+                  {device.metrics ? device.metrics.memory : 0}%
                 </span>
               </div>
             </div>
@@ -262,12 +225,18 @@ export function DeviceInfo({ deviceId }: { deviceId: string }) {
               <div className="flex items-center gap-2">
                 <div className="h-2 w-24 rounded-full bg-muted">
                   <div
-                    className={`h-full rounded-full ${device.metrics.disk > 80 ? "bg-destructive" : "bg-accent"}`}
-                    style={{ width: `${device.metrics.disk}%` }}
+                    className={`h-full rounded-full ${
+                      device.metrics && device.metrics.disk > 80
+                        ? "bg-destructive"
+                        : "bg-accent"
+                    }`}
+                    style={{
+                      width: `${device.metrics ? device.metrics.disk : 0}%`,
+                    }}
                   />
                 </div>
                 <span className="text-sm font-medium">
-                  {device.metrics.disk}%
+                  {device.metrics ? device.metrics.disk : 0}%
                 </span>
               </div>
             </div>

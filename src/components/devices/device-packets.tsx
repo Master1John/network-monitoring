@@ -38,192 +38,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// Sample network packet data by device
-const devicePackets = {
-  "device-003": [
-    {
-      id: "PKT001",
-      timestamp: "2023-04-06T10:30:05",
-      source: "192.168.1.101",
-      destination: "172.217.20.142",
-      protocol: "HTTPS",
-      port: 443,
-      size: 1240,
-      direction: "outbound",
-      status: "success",
-    },
-    {
-      id: "PKT005",
-      timestamp: "2023-04-06T10:29:45",
-      source: "172.217.20.142",
-      destination: "192.168.1.101",
-      protocol: "HTTPS",
-      port: 443,
-      size: 8750,
-      direction: "inbound",
-      status: "success",
-    },
-    {
-      id: "PKT009",
-      timestamp: "2023-04-06T10:28:30",
-      source: "192.168.1.101",
-      destination: "192.168.1.1",
-      protocol: "DNS",
-      port: 53,
-      size: 120,
-      direction: "outbound",
-      status: "success",
-    },
-    {
-      id: "PKT013",
-      timestamp: "2023-04-06T10:27:15",
-      source: "192.168.1.101",
-      destination: "104.18.23.210",
-      protocol: "HTTPS",
-      port: 443,
-      size: 950,
-      direction: "outbound",
-      status: "success",
-    },
-    {
-      id: "PKT017",
-      timestamp: "2023-04-06T10:26:00",
-      source: "104.18.23.210",
-      destination: "192.168.1.101",
-      protocol: "HTTPS",
-      port: 443,
-      size: 12500,
-      direction: "inbound",
-      status: "success",
-    },
-    {
-      id: "PKT021",
-      timestamp: "2023-04-06T10:25:30",
-      source: "192.168.1.101",
-      destination: "198.51.100.25",
-      protocol: "HTTPS",
-      port: 443,
-      size: 780,
-      direction: "outbound",
-      status: "blocked",
-    },
-  ],
-  "device-004": [
-    {
-      id: "PKT002",
-      timestamp: "2023-04-06T09:45:10",
-      source: "192.168.1.103",
-      destination: "198.51.100.25",
-      protocol: "HTTPS",
-      port: 443,
-      size: 1450,
-      direction: "outbound",
-      status: "blocked",
-    },
-    {
-      id: "PKT006",
-      timestamp: "2023-04-06T09:44:30",
-      source: "192.168.1.103",
-      destination: "192.168.1.1",
-      protocol: "DNS",
-      port: 53,
-      size: 110,
-      direction: "outbound",
-      status: "success",
-    },
-    {
-      id: "PKT010",
-      timestamp: "2023-04-06T09:43:15",
-      source: "192.168.1.103",
-      destination: "203.0.113.10",
-      protocol: "HTTPS",
-      port: 443,
-      size: 890,
-      direction: "outbound",
-      status: "success",
-    },
-  ],
-  "device-006": [
-    {
-      id: "PKT003",
-      timestamp: "2023-04-06T10:40:20",
-      source: "192.168.1.10",
-      destination: "192.168.1.101",
-      protocol: "SSH",
-      port: 22,
-      size: 3200,
-      direction: "outbound",
-      status: "success",
-    },
-    {
-      id: "PKT007",
-      timestamp: "2023-04-06T10:39:45",
-      source: "192.168.1.10",
-      destination: "192.168.1.1",
-      protocol: "NTP",
-      port: 123,
-      size: 76,
-      direction: "outbound",
-      status: "success",
-    },
-    {
-      id: "PKT011",
-      timestamp: "2023-04-06T10:38:30",
-      source: "45.33.32.156",
-      destination: "192.168.1.10",
-      protocol: "SSH",
-      port: 22,
-      size: 1280,
-      direction: "inbound",
-      status: "blocked",
-    },
-    {
-      id: "PKT015",
-      timestamp: "2023-04-06T10:37:15",
-      source: "192.168.1.10",
-      destination: "192.168.1.201",
-      protocol: "IPP",
-      port: 631,
-      size: 4500,
-      direction: "outbound",
-      status: "success",
-    },
-  ],
-  "device-007": [
-    {
-      id: "PKT004",
-      timestamp: "2023-04-06T10:20:35",
-      source: "192.168.1.150",
-      destination: "17.57.144.10",
-      protocol: "HTTPS",
-      port: 443,
-      size: 2100,
-      direction: "outbound",
-      status: "success",
-    },
-    {
-      id: "PKT008",
-      timestamp: "2023-04-06T10:19:50",
-      source: "17.57.144.10",
-      destination: "192.168.1.150",
-      protocol: "HTTPS",
-      port: 443,
-      size: 15800,
-      direction: "inbound",
-      status: "success",
-    },
-    {
-      id: "PKT012",
-      timestamp: "2023-04-06T10:18:25",
-      source: "192.168.1.150",
-      destination: "192.168.1.1",
-      protocol: "DNS",
-      port: 53,
-      size: 98,
-      direction: "outbound",
-      status: "success",
-    },
-  ],
+type NetworkPacket = {
+  id: string;
+  timestamp: string;
+  source: string;
+  destination: string;
+  protocol: string;
+  port: number;
+  size: number;
+  direction: "inbound" | "outbound";
+  status: "success" | "blocked";
 };
 
 export function DevicePackets({
@@ -233,27 +57,49 @@ export function DevicePackets({
   deviceId: string;
   limit?: number;
 }) {
-  const [packets, setPackets] = useState<any[]>([]);
+  const [packets, setPackets] = useState<NetworkPacket[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPacket, setSelectedPacket] = useState<any>(null);
+  const [selectedPacket, setSelectedPacket] = useState<NetworkPacket | null>(
+    null,
+  );
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const deviceData =
-        devicePackets[deviceId as keyof typeof devicePackets] || [];
-      setPackets(limit ? deviceData.slice(0, limit) : deviceData);
-      setLoading(false);
-    }, 500);
+    async function fetchPackets() {
+      try {
+        setLoading(true);
+        const url = new URL(
+          `/api/devices/${deviceId}/packets`,
+          window.location.origin,
+        );
+        if (limit) {
+          url.searchParams.append("limit", limit.toString());
+        }
+
+        const response = await fetch(url.toString());
+        const data = await response.json();
+
+        if (data.packets) {
+          setPackets(data.packets);
+        }
+      } catch (error) {
+        console.error("Failed to fetch network packets:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (deviceId) {
+      fetchPackets();
+    }
   }, [deviceId, limit]);
 
   const filteredPackets = packets.filter(
     (packet) =>
-      packet.source.includes(searchTerm) ||
-      packet.destination.includes(searchTerm) ||
-      packet.protocol.toLowerCase().includes(searchTerm.toLowerCase()),
+      packet.source?.includes(searchTerm) ||
+      packet.destination?.includes(searchTerm) ||
+      packet.protocol?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const formatDate = (dateString: string) => {
@@ -270,7 +116,7 @@ export function DevicePackets({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const handleViewPacket = (packet: any) => {
+  const handleViewPacket = (packet: NetworkPacket) => {
     setSelectedPacket(packet);
     setDialogOpen(true);
   };

@@ -17,91 +17,74 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-// Sample user data
-const userData = {
-  "user-001": {
-    id: "user-001",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1 (555) 123-4567",
-    role: "admin",
-    status: "active",
-    lastActive: "2023-04-06T10:45:00",
-    location: "New York, USA",
-    department: "IT",
-    position: "System Administrator",
-    joinDate: "2022-01-15",
-    twoFactorEnabled: true,
-  },
-  "user-002": {
-    id: "user-002",
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    phone: "+1 (555) 987-6543",
-    role: "admin",
-    status: "active",
-    lastActive: "2023-04-06T10:30:00",
-    location: "San Francisco, USA",
-    department: "IT",
-    position: "Network Administrator",
-    joinDate: "2022-02-10",
-    twoFactorEnabled: true,
-  },
-  "user-003": {
-    id: "user-003",
-    name: "Robert Johnson",
-    email: "robert.johnson@example.com",
-    phone: "+1 (555) 456-7890",
-    role: "admin",
-    status: "active",
-    lastActive: "2023-04-06T09:15:00",
-    location: "Chicago, USA",
-    department: "IT",
-    position: "IT Director",
-    joinDate: "2021-11-05",
-    twoFactorEnabled: true,
-  },
-  "user-008": {
-    id: "user-008",
-    name: "Lisa Wilson",
-    email: "lisa.wilson@example.com",
-    phone: "+1 (555) 234-5678",
-    role: "user",
-    status: "locked",
-    lastActive: "2023-04-04T14:20:00",
-    location: "Boston, USA",
-    department: "Marketing",
-    position: "Marketing Specialist",
-    joinDate: "2022-06-20",
-    twoFactorEnabled: false,
-  },
-  "user-012": {
-    id: "user-012",
-    name: "Jennifer White",
-    email: "jennifer.white@example.com",
-    phone: "+1 (555) 876-5432",
-    role: "security",
-    status: "active",
-    lastActive: "2023-04-06T10:05:00",
-    location: "Seattle, USA",
-    department: "Security",
-    position: "Security Analyst",
-    joinDate: "2022-04-15",
-    twoFactorEnabled: true,
-  },
+type UserProfileData = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  status: string;
+  lastActive: string;
+  location: string;
+  department: string;
+  position: string;
+  joinDate: string;
+  twoFactorEnabled: boolean;
 };
 
 export function UserProfile({ userId }: { userId: string }) {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setUser(userData[userId as keyof typeof userData] || null);
-      setLoading(false);
-    }, 500);
+    async function fetchUserProfile() {
+      try {
+        const response = await fetch(`/api/users/${userId}`);
+        const data = await response.json();
+
+        if (data.user) {
+          setUser(data.user);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (userId) {
+      fetchUserProfile();
+    }
   }, [userId]);
+
+  const handleLockUnlock = async () => {
+    if (!user) return;
+
+    try {
+      const newStatus = user.status === "locked" ? "active" : "locked";
+
+      const response = await fetch(`/api/users/${userId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: newStatus,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUser({
+          ...user,
+          status: newStatus,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update user status:", error);
+    }
+  };
 
   if (loading) {
     return <div>Loading user profile...</div>;
@@ -196,11 +179,15 @@ export function UserProfile({ userId }: { userId: string }) {
                 Reset Password
               </Button>
               {user.status === "locked" ? (
-                <Button variant="default" size="sm">
+                <Button variant="default" size="sm" onClick={handleLockUnlock}>
                   Unlock Account
                 </Button>
               ) : (
-                <Button variant="destructive" size="sm">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleLockUnlock}
+                >
                   Lock Account
                 </Button>
               )}

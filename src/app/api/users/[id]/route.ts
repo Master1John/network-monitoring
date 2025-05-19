@@ -1,78 +1,5 @@
 import { NextResponse } from "next/server";
-
-// In a real application, this would be fetched from a database
-const users = [
-  {
-    id: "user-001",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1 (555) 123-4567",
-    role: "admin",
-    status: "active",
-    lastActive: "2023-04-06T10:45:00",
-    location: "New York, USA",
-    department: "IT",
-    position: "System Administrator",
-    joinDate: "2022-01-15",
-    twoFactorEnabled: true,
-  },
-  {
-    id: "user-002",
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    phone: "+1 (555) 987-6543",
-    role: "admin",
-    status: "active",
-    lastActive: "2023-04-06T10:30:00",
-    location: "San Francisco, USA",
-    department: "IT",
-    position: "Network Administrator",
-    joinDate: "2022-02-10",
-    twoFactorEnabled: true,
-  },
-  {
-    id: "user-003",
-    name: "Robert Johnson",
-    email: "robert.johnson@example.com",
-    phone: "+1 (555) 456-7890",
-    role: "admin",
-    status: "active",
-    lastActive: "2023-04-06T09:15:00",
-    location: "Chicago, USA",
-    department: "IT",
-    position: "IT Director",
-    joinDate: "2021-11-05",
-    twoFactorEnabled: true,
-  },
-  {
-    id: "user-008",
-    name: "Lisa Wilson",
-    email: "lisa.wilson@example.com",
-    phone: "+1 (555) 234-5678",
-    role: "user",
-    status: "locked",
-    lastActive: "2023-04-04T14:20:00",
-    location: "Boston, USA",
-    department: "Marketing",
-    position: "Marketing Specialist",
-    joinDate: "2022-06-20",
-    twoFactorEnabled: false,
-  },
-  {
-    id: "user-012",
-    name: "Jennifer White",
-    email: "jennifer.white@example.com",
-    phone: "+1 (555) 876-5432",
-    role: "security",
-    status: "active",
-    lastActive: "2023-04-06T10:05:00",
-    location: "Seattle, USA",
-    department: "Security",
-    position: "Security Analyst",
-    joinDate: "2022-04-15",
-    twoFactorEnabled: true,
-  },
-];
+import prisma from "@/lib/prisma";
 
 export async function GET(
   request: Request,
@@ -80,13 +7,30 @@ export async function GET(
 ) {
   try {
     const userId = params.id;
-    const user = users.find((u) => u.id === userId);
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        devices: true,
+        permissions: true,
+      },
+    });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ user });
+    // Count devices
+    const deviceCount = user.devices.length;
+
+    // Format the response
+    const userResponse = {
+      ...user,
+      deviceCount,
+      devices: undefined, // Remove the devices array from the response
+    };
+
+    return NextResponse.json({ user: userResponse });
   } catch (error) {
     console.error("Error fetching user:", error);
     return NextResponse.json(
@@ -102,21 +46,31 @@ export async function PUT(
 ) {
   try {
     const userId = params.id;
-    const userIndex = users.findIndex((u) => u.id === userId);
+    const updateData = await request.json();
 
-    if (userIndex === -1) {
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existingUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const updateData = await request.json();
+    // Format dates if provided
+    if (updateData.lastActive) {
+      updateData.lastActive = new Date(updateData.lastActive);
+    }
 
-    // In a real application, you would update the database
-    // For this mock API, we'll just return success with the updated data
-    const updatedUser = {
-      ...users[userIndex],
-      ...updateData,
-      id: userId, // Ensure ID doesn't change
-    };
+    if (updateData.joinDate) {
+      updateData.joinDate = new Date(updateData.joinDate);
+    }
+
+    // Update the user
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+    });
 
     return NextResponse.json({
       success: true,
@@ -138,14 +92,21 @@ export async function DELETE(
 ) {
   try {
     const userId = params.id;
-    const userIndex = users.findIndex((u) => u.id === userId);
 
-    if (userIndex === -1) {
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existingUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // In a real application, you would delete from the database
-    // For this mock API, we'll just return success
+    // Delete the user
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+
     return NextResponse.json({
       success: true,
       message: "User deleted successfully",

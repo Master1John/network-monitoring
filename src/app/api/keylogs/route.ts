@@ -1,58 +1,76 @@
 import { NextResponse } from "next/server";
-
-// In a real application, this would be fetched from a database
-const keylogs = [
-  {
-    id: "KL001",
-    device: "Workstation-001",
-    user: "john.doe",
-    timestamp: "2023-04-06T10:30:00",
-    type: "Application",
-    content: "Microsoft Word - Document1.docx",
-    flagged: false,
-  },
-  {
-    id: "KL002",
-    device: "Laptop-003",
-    user: "jane.smith",
-    timestamp: "2023-04-06T10:15:00",
-    type: "Browser",
-    content: "https://mail.google.com",
-    flagged: false,
-  },
-  // More keylog entries would be here
-];
+import prisma from "@/lib/prisma";
 
 export async function GET(request: Request) {
   try {
-    // In a real application, you would implement pagination, filtering, etc.
     const url = new URL(request.url);
     const device = url.searchParams.get("device");
     const user = url.searchParams.get("user");
     const flagged = url.searchParams.get("flagged");
+    const limit = url.searchParams.get("limit")
+      ? Number.parseInt(url.searchParams.get("limit")!)
+      : undefined;
 
-    let filteredKeylogs = [...keylogs];
+    // Build the filter object for Prisma
+    const filter: any = {};
 
     if (device) {
-      filteredKeylogs = filteredKeylogs.filter(
-        (keylog) => keylog.device === device,
-      );
+      filter.device = {
+        name: {
+          contains: device,
+          mode: "insensitive",
+        },
+      };
     }
 
     if (user) {
-      filteredKeylogs = filteredKeylogs.filter(
-        (keylog) => keylog.user === user,
-      );
+      filter.user = {
+        name: {
+          contains: user,
+          mode: "insensitive",
+        },
+      };
     }
 
     if (flagged) {
-      filteredKeylogs = filteredKeylogs.filter(
-        (keylog) => keylog.flagged === (flagged === "true"),
-      );
+      filter.flagged = flagged === "true";
     }
 
-    return NextResponse.json({ keylogs: filteredKeylogs });
+    // Fetch keylogs from database with filters
+    const keylogs = await prisma.keylog.findMany({
+      where: filter,
+      include: {
+        device: {
+          select: {
+            name: true,
+          },
+        },
+        user: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        timestamp: "desc",
+      },
+      take: limit,
+    });
+
+    // Format the response
+    const formattedKeylogs = keylogs.map((keylog) => ({
+      id: keylog.id,
+      device: keylog.device?.name || "Unknown Device",
+      user: keylog.user?.name || "Unknown User",
+      timestamp: keylog.timestamp,
+      type: keylog.type,
+      content: keylog.content,
+      flagged: keylog.flagged,
+    }));
+
+    return NextResponse.json({ keylogs: formattedKeylogs });
   } catch (error) {
+    console.error("Error fetching keylogs:", error);
     return NextResponse.json(
       { success: false, message: "Failed to fetch keylogs" },
       { status: 500 },
@@ -62,17 +80,53 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    // In a real application, you would validate the request and save to a database
     const keylogData = await request.json();
 
-    // Process and store the keylog data
-    // This is where you would implement your business logic for handling keylogs
+    // Validate required fields
+    if (!keylogData.deviceId || !keylogData.type || !keylogData.content) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Missing required fields: deviceId, type, and content are required",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Check if device exists
+    const device = await prisma.device.findUnique({
+      where: { id: keylogData.deviceId },
+    });
+
+    if (!device) {
+      return NextResponse.json(
+        { success: false, message: "Device not found" },
+        { status: 404 },
+      );
+    }
+
+    // Create the keylog entry
+    const newKeylog = await prisma.keylog.create({
+      data: {
+        type: keylogData.type,
+        content: keylogData.content,
+        flagged: keylogData.flagged || false,
+        timestamp: keylogData.timestamp
+          ? new Date(keylogData.timestamp)
+          : new Date(),
+        deviceId: keylogData.deviceId,
+        userId: keylogData.userId || device.userId, // Use device's user if not specified
+      },
+    });
 
     return NextResponse.json({
       success: true,
       message: "Keylog data received successfully",
+      keylog: newKeylog,
     });
   } catch (error) {
+    console.error("Error processing keylog data:", error);
     return NextResponse.json(
       { success: false, message: "Failed to process keylog data" },
       { status: 500 },

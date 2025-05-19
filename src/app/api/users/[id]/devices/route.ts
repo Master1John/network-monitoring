@@ -1,90 +1,5 @@
 import { NextResponse } from "next/server";
-
-// Sample user devices data
-const userDevicesData = {
-  "user-001": [
-    {
-      id: "device-003",
-      name: "Workstation-001",
-      type: "workstation",
-      ipAddress: "192.168.1.101",
-      status: "online",
-      lastSeen: "2023-04-06T10:43:00",
-    },
-    {
-      id: "device-006",
-      name: "Server-Main",
-      type: "server",
-      ipAddress: "192.168.1.10",
-      status: "online",
-      lastSeen: "2023-04-06T10:42:00",
-    },
-  ],
-  "user-002": [
-    {
-      id: "device-007",
-      name: "Mobile-CEO",
-      type: "mobile",
-      ipAddress: "192.168.1.150",
-      status: "online",
-      lastSeen: "2023-04-06T10:30:00",
-    },
-  ],
-  "user-003": [
-    {
-      id: "device-001",
-      name: "Router-Main",
-      type: "router",
-      ipAddress: "192.168.1.1",
-      status: "online",
-      lastSeen: "2023-04-06T10:45:00",
-    },
-    {
-      id: "device-002",
-      name: "Switch-Floor1",
-      type: "switch",
-      ipAddress: "192.168.1.2",
-      status: "online",
-      lastSeen: "2023-04-06T10:44:00",
-    },
-    {
-      id: "device-005",
-      name: "Printer-Office",
-      type: "printer",
-      ipAddress: "192.168.1.201",
-      status: "online",
-      lastSeen: "2023-04-06T10:40:00",
-    },
-  ],
-  "user-008": [
-    {
-      id: "device-004",
-      name: "Laptop-003",
-      type: "laptop",
-      ipAddress: "192.168.1.103",
-      status: "offline",
-      lastSeen: "2023-04-06T09:15:00",
-    },
-  ],
-  "user-012": [
-    {
-      id: "device-008",
-      name: "Security-Laptop",
-      type: "laptop",
-      ipAddress: "192.168.1.155",
-      status: "online",
-      lastSeen: "2023-04-06T10:35:00",
-    },
-    {
-      id: "device-009",
-      name: "Security-Mobile",
-      type: "mobile",
-      ipAddress: "192.168.1.156",
-      status: "online",
-      lastSeen: "2023-04-06T10:25:00",
-    },
-  ],
-};
+import prisma from "@/lib/prisma";
 
 export async function GET(
   request: Request,
@@ -101,42 +16,43 @@ export async function GET(
       ? Number.parseInt(url.searchParams.get("limit")!)
       : undefined;
 
-    // Get devices for the user
-    const devices =
-      userDevicesData[userId as keyof typeof userDevicesData] || [];
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
 
-    // Apply filters
-    let filteredDevices = [...devices];
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Build the filter object for Prisma
+    const filter: any = { userId };
 
     if (type) {
-      filteredDevices = filteredDevices.filter(
-        (device) => device.type === type,
-      );
+      filter.type = type;
     }
 
     if (status) {
-      filteredDevices = filteredDevices.filter(
-        (device) => device.status === status,
-      );
+      filter.status = status;
     }
 
-    // Apply limit if specified
-    if (limit && limit > 0) {
-      filteredDevices = filteredDevices.slice(0, limit);
-    }
+    // Fetch devices with filters
+    const devices = await prisma.device.findMany({
+      where: filter,
+      orderBy: { lastSeen: "desc" },
+      take: limit,
+    });
 
     // Calculate statistics
     const stats = {
-      total: filteredDevices.length,
-      online: filteredDevices.filter((device) => device.status === "online")
-        .length,
-      offline: filteredDevices.filter((device) => device.status === "offline")
-        .length,
+      total: devices.length,
+      online: devices.filter((device) => device.status === "online").length,
+      offline: devices.filter((device) => device.status === "offline").length,
       byType: {} as Record<string, number>,
     };
 
     // Count devices by type
-    filteredDevices.forEach((device) => {
+    devices.forEach((device) => {
       if (!stats.byType[device.type]) {
         stats.byType[device.type] = 0;
       }
@@ -144,7 +60,7 @@ export async function GET(
     });
 
     return NextResponse.json({
-      devices: filteredDevices,
+      devices,
       stats,
     });
   } catch (error) {
@@ -175,14 +91,41 @@ export async function POST(
       );
     }
 
-    // In a real application, you would save to a database
-    // For this mock API, we'll just return success with the data
-    const newDevice = {
-      id: `device-${Math.floor(Math.random() * 1000)}`,
-      status: deviceData.status || "online",
-      lastSeen: new Date().toISOString(),
-      ...deviceData,
-    };
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Format metrics as JSON if provided
+    const metrics = deviceData.metrics
+      ? deviceData.metrics
+      : { cpu: 0, memory: 0, disk: 0 };
+
+    // Create the device
+    const newDevice = await prisma.device.create({
+      data: {
+        name: deviceData.name,
+        type: deviceData.type,
+        ipAddress: deviceData.ipAddress,
+        macAddress: deviceData.macAddress,
+        status: deviceData.status || "online",
+        lastSeen: deviceData.lastSeen
+          ? new Date(deviceData.lastSeen)
+          : new Date(),
+        os: deviceData.os,
+        manufacturer: deviceData.manufacturer,
+        model: deviceData.model,
+        installedDate: deviceData.installedDate
+          ? new Date(deviceData.installedDate)
+          : null,
+        userId,
+        metrics: metrics,
+      },
+    });
 
     return NextResponse.json({
       success: true,
