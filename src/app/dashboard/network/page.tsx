@@ -1,5 +1,8 @@
 "use client";
-import { Suspense, useEffect } from "react";
+import { NetworkStatus } from "@/components/dashboard/network-status";
+import { NetworkDevices } from "@/components/network/network-devices";
+import { NetworkTopology } from "@/components/network/network-topology";
+import { NetworkTraffic } from "@/components/network/network-traffic";
 import {
 	Card,
 	CardContent,
@@ -8,21 +11,17 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { NetworkStatus } from "@/components/dashboard/network-status";
-import { NetworkDevices } from "@/components/network/network-devices";
-import { NetworkTopology } from "@/components/network/network-topology";
-import { NetworkTraffic } from "@/components/network/network-traffic";
 import useSocketIO from "@/hooks/useSocketIO";
+import { Packet } from "@/types";
+import { Suspense, useEffect } from "react";
 
 export default function NetworkPage() {
 	useEffect(() => {
 		const socket = useSocketIO();
 
-		socket.join("Admin").listen("NewPackets", (packets: Array<any>) => {
+		socket.join("Admin").listen("NewPackets", (packets: Array<Packet>) => {
 			console.log(packets);
 		});
-
-		socket.emit("hello", "world");
 
 		return () => {
 			socket.disconnect();

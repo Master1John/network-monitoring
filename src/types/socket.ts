@@ -1,34 +1,35 @@
 import { Socket } from "socket.io-client";
+import { Server } from "socket.io";
 
 export class SocketIO {
-	constructor(protected socket: Socket) {
-		socket.on("connect", () => {
-			console.log("Connected:", socket.id);
+	id: Socket["id"];
+
+	constructor(protected io: Socket) {
+		this.id = io.id;
+
+		io.on("connect", () => {
+			console.log("Connected:", io.id);
 		});
 
-		socket.on("connect_error", (err) => {
+		io.on("connect_error", (err) => {
 			console.error("Connection error:", err.message, err.stack);
-		});
-
-		socket.on("message", (data) => {
-			console.log("Received:", data);
 		});
 	}
 
 	join(room: string) {
-		return new PresenceRoom(this.socket, room);
+		return new PresenceRoom(this.io, room);
 	}
 
 	private(room: string) {
-		return new PrivateRoom(this.socket, room);
+		return new PrivateRoom(this.io, room);
 	}
 
 	disconnect() {
-		this.socket.disconnect();
+		this.io.disconnect();
 	}
 
 	emit(ev: string, data: any) {
-		this.socket.emit(ev, data);
+		this.io.emit(ev, data);
 	}
 }
 
@@ -43,9 +44,9 @@ export class Room {
 	}
 
 	listen(event: string, callback: (...data: any[]) => void) {
-		if (["here", "joining", "leaving"].includes(event)) return;
-
-		this.socket.on(event, callback);
+		if (!["here", "joining", "leaving"].includes(event)) {
+			this.socket.on(event, callback);
+		}
 
 		return this;
 	}

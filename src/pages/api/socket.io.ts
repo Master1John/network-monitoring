@@ -1,6 +1,7 @@
-import { Server as IOServer } from "socket.io";
-import type { NextApiRequest, NextApiResponse } from "next";
+import { handleSocket } from "@/lib/socket";
 import type { Server as HTTPServer } from "http";
+import type { NextApiRequest, NextApiResponse } from "next";
+import { Server as IOServer } from "socket.io";
 
 export type NextApiResponseWithSocket = NextApiResponse & {
 	socket: {
@@ -25,23 +26,7 @@ export default function handler(
 			},
 		});
 
-		io.on("connection", (socket) => {
-			console.log("New client connected:", socket.id);
-
-			socket.on("join", (room: string) => {
-				console.log("Attempting to join room: ", room);
-				socket.join(room);
-			});
-
-			socket.on("NewPackets", (packets: Array<any>) => {
-				console.log("Receive new packets");
-				io.to("Admin").emit("NewPackets", packets);
-			});
-
-			socket.on("disconnect", () => {
-				console.log("Client disconnected:", socket.id);
-			});
-		});
+		handleSocket(io);
 
 		res.socket.server.io = io;
 	} else {

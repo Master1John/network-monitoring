@@ -9,20 +9,31 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import useSocketIO from "@/hooks/useSocketIO";
-import { SocketIO } from "@/types/socket";
+import { Device, Node } from "@/types";
 import { Suspense, useEffect, useState } from "react";
-let socket: SocketIO;
+import { Socket } from "socket.io-client";
 
 export default function DevicesPage() {
-	const [nodes, setNodes] = useState<Array<string>>([]);
+	const [nodes, setNodes] = useState<Array<Device>>([]);
 
 	useEffect(() => {
-		socket = useSocketIO();
+		const socket = useSocketIO();
 
 		socket
 			.join("Admin")
 			.here(console.log)
-			.listen("Nodes", (data: Array<string>) => setNodes(data));
+			.listen("Node", (node: Node) => {
+				setNodes((nodes) => [
+					...nodes,
+					{
+						...node,
+						id: String(socket.id),
+					},
+				]);
+			})
+			.listen("Nodes", (nodes: Array<Node>) => {
+				setNodes(nodes.map((node) => ({ ...node, id: String(socket.id) })));
+			});
 
 		return () => {
 			socket.disconnect();
@@ -49,9 +60,7 @@ export default function DevicesPage() {
 						<CardTitle className="text-sm font-medium">Online</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold">
-							{Object.keys(nodes).length}
-						</div>
+						<div className="text-2xl font-bold">{nodes.length}</div>
 						<p className="text-xs text-muted-foreground">
 							75% of total devices
 						</p>
@@ -90,7 +99,7 @@ export default function DevicesPage() {
 					</CardHeader>
 					<CardContent>
 						<Suspense fallback={<div>Loading devices...</div>}>
-							<DeviceList />
+							<DeviceList devices={nodes} />
 						</Suspense>
 					</CardContent>
 				</Card>
