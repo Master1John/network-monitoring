@@ -8,6 +8,7 @@ datasource db {
 }
 
 model User {
+  @@map("users")
   id               String         @id @default(auto()) @map("_id") @db.ObjectId
   name             String
   email            String         @unique
@@ -29,11 +30,12 @@ model User {
 }
 
 model Device {
+  @@map("devices")
   id            String          @id @default(auto()) @map("_id") @db.ObjectId
   name          String
   type          String // server, workstation, laptop, mobile, router, switch, etc.
-  ipAddress     String
-  macAddress    String?
+  ip            String
+  mac           String?
   status        String          @default("online") // online, offline
   lastSeen      DateTime        @default(now())
   os            String?
@@ -50,6 +52,7 @@ model Device {
 }
 
 model Keylog {
+  @@map("keylogs")
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   type      String // Application, Browser, System
   content   String
@@ -62,6 +65,7 @@ model Keylog {
 }
 
 model NetworkPacket {
+  @@map("packets")
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   source      String
   destination String
@@ -78,6 +82,7 @@ model NetworkPacket {
 }
 
 model UserActivity {
+  @@map("activities")
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   action    String // login, settings, security, user, device, locked
   details   String
@@ -90,6 +95,7 @@ model UserActivity {
 }
 
 model LoginHistory {
+  @@map("sessions")
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   ipAddress String
   location  String?
@@ -105,6 +111,7 @@ model LoginHistory {
 }
 
 model Permission {
+  @@map("permissions")
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   role        String
   permissions Json
