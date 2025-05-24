@@ -195,7 +195,7 @@ export function DeviceList(props: Props) {
 						<p className="text-sm text-muted-foreground truncate">
 							Total Devices
 						</p>
-						<p className="text-2xl font-bold">{stats.total}</p>
+						<p className="text-2xl font-bold">{devices.length}</p>
 					</div>
 					<div className="bg-card rounded-lg p-4 shadow">
 						<p className="text-sm text-muted-foreground truncate">Online</p>
