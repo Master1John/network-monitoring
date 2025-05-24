@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { Device } from "@/types";
 
 export async function GET(request: Request) {
 	try {
@@ -78,10 +79,10 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
 	try {
-		const deviceData = await request.json();
+		const deviceData = (await request.json()) as Device;
 
 		// Validate required fields
-		if (!deviceData.name || !deviceData.type || !deviceData.ipAddress) {
+		if (!deviceData.name || !deviceData.type || !deviceData.ip) {
 			return NextResponse.json(
 				{
 					error:
@@ -92,29 +93,25 @@ export async function POST(request: Request) {
 		}
 
 		// Format metrics as JSON if provided
-		const metrics = deviceData.metrics
-			? deviceData.metrics
-			: { cpu: 0, memory: 0, disk: 0 };
+		// const metrics = deviceData.metrics
+		// 	? deviceData.metrics
+		// 	: { cpu: 0, memory: 0, disk: 0 };
 
 		// Create the device in the database
 		const newDevice = await prisma.device.create({
 			data: {
 				name: deviceData.name,
 				type: deviceData.type,
-				ipAddress: deviceData.ipAddress,
-				macAddress: deviceData.macAddress,
-				status: deviceData.status || "online",
-				lastSeen: deviceData.lastSeen
-					? new Date(deviceData.lastSeen)
-					: new Date(),
+				ip: deviceData.ip,
+				mac: deviceData.mac,
 				os: deviceData.os,
 				manufacturer: deviceData.manufacturer,
-				model: deviceData.model,
-				installedDate: deviceData.installedDate
-					? new Date(deviceData.installedDate)
-					: null,
-				userId: deviceData.userId || null,
-				metrics: metrics,
+				// model: deviceData.model,
+				// installedDate: deviceData.installedDate
+				// 	? new Date(deviceData.installedDate)
+				// 	: null,
+				// userId: deviceData.userId || null,
+				// metrics: metrics,
 			},
 		});
 

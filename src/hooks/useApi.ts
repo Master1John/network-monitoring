@@ -26,7 +26,7 @@ export default function useApi(): AppApi {
 		}
 	}
 	async function addDevice(device: Device) {
-		const response = await fetch("api/devices", {
+		const response = await fetch("/api/devices", {
 			method: "POST",
 			body: JSON.stringify(device),
 		});

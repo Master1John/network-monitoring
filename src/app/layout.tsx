@@ -17,7 +17,7 @@ export default async function RootLayout({
 }: {
 	children: React.ReactNode;
 }) {
-	fetch("/api/socket.io");
+	fetch("/api/socket.io").catch(() => {});
 
 	return (
 		<html lang="en" suppressHydrationWarning>

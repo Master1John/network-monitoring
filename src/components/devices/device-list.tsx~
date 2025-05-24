@@ -1,26 +1,7 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
-import useApi from "@/hooks/useApi";
-import { Device, DeviceStats } from "@/types";
+import { useState, useEffect, ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import {
 	AlertTriangle,
 	ArrowUpDown,
@@ -33,39 +14,58 @@ import {
 	Wifi,
 	WifiOff,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import useApi from "@/hooks/useApi";
+import { Device, DeviceStats } from "@/types";
 
-// interface Devicer {
-// 	id: string;
-// 	name: string;
-// 	type: string;
-// 	ipAddress: string;
-// 	macAddress: string;
-// 	status: string;
-// 	lastSeen: string;
-// 	metrics: {
-// 		cpu: number;
-// 		memory: number;
-// 		disk: number;
-// 	};
-// 	user?: {
-// 		id: string;
-// 		name: string;
-// 		email: string;
-// 	};
-// }
+interface Devicer {
+	id: string;
+	name: string;
+	type: string;
+	ipAddress: string;
+	macAddress: string;
+	status: string;
+	lastSeen: string;
+	metrics: {
+		cpu: number;
+		memory: number;
+		disk: number;
+	};
+	user?: {
+		id: string;
+		name: string;
+		email: string;
+	};
+}
 
-// interface DeviceResponse {
-// 	devices: Device[];
-// 	stats: DeviceStats;
-// }
+interface DeviceResponse {
+	devices: Device[];
+	stats: DeviceStats;
+}
 
 interface Props {
 	devices: Array<Device>;
 }
 export function DeviceList(props: Props) {
-	const [devices, setDevices] = useState<Device[]>([]);
+	const [devices, setDevices] = useState<Device[]>(props.devices ?? []);
 	const [remoteDevices, setRemoteDevices] = useState<Device[]>([]);
 	const [stats, setStats] = useState<DeviceStats | null>(null);
 	const [searchTerm, setSearchTerm] = useState("");
@@ -75,39 +75,28 @@ export function DeviceList(props: Props) {
 	const api = useApi();
 
 	useEffect(() => {
-		if (props.devices.length == 0) {
-			setDevices((devices) => devices.map((d) => ({ ...d, online: false })));
-		}
-		if (remoteDevices.length == 0) {
-			setDevices((devices) =>
-				devices.length
-					? devices
-					: props.devices.map((d) => ({ ...d, online: true })),
-			);
-			return;
-		}
-
 		setDevices((devices) => {
-			devices = remoteDevices.map((d) => ({ ...d, online: false }));
+			console.log("tring to update devices with data: ", devices);
+			if (!devices.length) return props.devices;
 
 			for (const node of props.devices) {
-				const index = devices.findIndex((d) => d.mac === node.mac);
+				const index = remoteDevices.findIndex((d) => d.mac === node.mac);
 
-				if (index >= 0) {
+				// If Node is already in devices, set online:true
+				if (index !== -1) {
+					// TODO: Prevent this function from Adding a device multiple times
+					// api.addDevice(devices[index]);
+
 					devices[index].online = true;
 				} else {
-					const newDevice = { ...node, id: node.socketId };
-
-					// TODO: Remove ID from new device before adding
-					api.addDevice(newDevice);
-
-					devices.push(node);
+					// else add the node to the device list
+					devices.push({ ...node, online: true });
 				}
 			}
 
 			return devices;
 		});
-	}, [remoteDevices, props.devices]);
+	}, [remoteDevices]);
 
 	const fetchDevices = async () => {
 		setLoading(true);

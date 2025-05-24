@@ -21,18 +21,12 @@ export default function DevicesPage() {
 
 		socket
 			.join("Admin")
-			.here(console.log)
+			.here(() => {})
 			.listen("Node", (node: Node) => {
-				setNodes((nodes) => [
-					...nodes,
-					{
-						...node,
-						id: String(socket.id),
-					},
-				]);
+				setNodes((nodes) => [...nodes, { ...node, id: node.socketId }]);
 			})
 			.listen("Nodes", (nodes: Array<Node>) => {
-				setNodes(nodes.map((node) => ({ ...node, id: String(socket.id) })));
+				setNodes(nodes.map((n) => ({ ...n, id: n.socketId })));
 			});
 
 		return () => {

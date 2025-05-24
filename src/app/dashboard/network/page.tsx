@@ -20,7 +20,7 @@ export default function NetworkPage() {
 		const socket = useSocketIO();
 
 		socket.join("Admin").listen("NewPackets", (packets: Array<Packet>) => {
-			console.log(packets);
+			// TODO: handle packets received from backend
 		});
 
 		return () => {

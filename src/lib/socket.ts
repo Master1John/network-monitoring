@@ -1,7 +1,7 @@
 import { Device, Packet } from "@/types";
 import { Server, Socket } from "socket.io";
 
-const rooms: Record<string, Array<any>> = {};
+const rooms: { [name: string]: Array<any> } = {};
 const nodes: { [socketId: string]: { rooms: Array<string> } } = {};
 
 export function handleSocket(io: Server) {
@@ -16,7 +16,7 @@ export function handleSocket(io: Server) {
 
 			// Add current socket to room
 			rooms[room] = rooms[room] || [];
-			rooms[room].push(data ?? socket.id);
+			rooms[room].push(data ? { ...data, socketId: socket.id } : socket.id);
 
 			// Add current room to nodes list on the socket
 			nodes[socket.id] = nodes[socket.id] || {};
@@ -27,7 +27,7 @@ export function handleSocket(io: Server) {
 			io.to(room).emit("joining", { sid: socket.id });
 
 			if (room === "Nodes") {
-				io.to("Admin").emit("Node", data ?? socket.id);
+				io.to("Admin").emit("Node", data ? { ...data } : socket.id);
 			}
 
 			if (room === "Admin") {
@@ -43,13 +43,18 @@ export function handleSocket(io: Server) {
 			console.log("Client disconnected:", socket.id);
 
 			// Delete disconnected socket from its rooms
+			console.log("\n Before diconnection data: room, nodes", rooms, nodes);
 			for (const room of nodes[socket.id]?.rooms || []) {
-				const index = rooms[room]?.findIndex((d) =>
-					typeof d === "string" ? d == socket.id : d.socketId == socket.id,
+				const index = rooms[room]?.findIndex((node) =>
+					typeof node === "string"
+						? node == socket.id
+						: node.socketId == socket.id,
 				);
 
 				if (index >= 0) {
 					rooms[room]?.splice(index, 1);
+
+					if (rooms[room].length < 0) delete rooms[room];
 				}
 
 				if (room == "Nodes") {
@@ -57,7 +62,10 @@ export function handleSocket(io: Server) {
 				}
 			}
 
-			delete nodes[socket.id];
+			if (nodes.hasOwnProperty(socket.id)) {
+				delete nodes[socket.id];
+			}
+			console.log("\nAfter diconnection data: room, nodes", rooms, nodes);
 		});
 	});
 }

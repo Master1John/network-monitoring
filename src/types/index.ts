@@ -4,15 +4,18 @@ export interface Keylog {
 }
 
 export interface Node {
-	hostname: string;
+  socketId: string;
+	name: string;
 	ip: string;
 	mac: string;
 	os: string;
+	manufacturer: string;
 	type: string;
 }
 
 export interface Device extends Node {
-	id: string;
+  id: string;
+	online?: boolean;
 }
 
 export interface DeviceStats {

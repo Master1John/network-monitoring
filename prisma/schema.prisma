@@ -36,7 +36,6 @@ model Device {
   type          String // server, workstation, laptop, mobile, router, switch, etc.
   ip            String
   mac           String?
-  status        String          @default("online") // online, offline
   lastSeen      DateTime        @default(now())
   os            String?
   manufacturer  String?
