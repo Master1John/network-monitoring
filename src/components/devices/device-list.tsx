@@ -20,7 +20,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import useApi from "@/hooks/useApi";
-import { Device, DeviceStats } from "@/types";
+import { Device, DeviceStats, Node } from "@/types"; // Make sure Node is imported
 import {
 	AlertTriangle,
 	ArrowUpDown,
@@ -34,39 +34,14 @@ import {
 	WifiOff,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-
-// interface Devicer {
-// 	id: string;
-// 	name: string;
-// 	type: string;
-// 	ipAddress: string;
-// 	macAddress: string;
-// 	status: string;
-// 	lastSeen: string;
-// 	metrics: {
-// 		cpu: number;
-// 		memory: number;
-// 		disk: number;
-// 	};
-// 	user?: {
-// 		id: string;
-// 		name: string;
-// 		email: string;
-// 	};
-// }
-
-// interface DeviceResponse {
-// 	devices: Device[];
-// 	stats: DeviceStats;
-// }
+import { useEffect, useState, useMemo, useCallback } from "react"; // Added useMemo, useCallback
 
 interface Props {
-	devices: Array<Device>;
+	devices: Array<Node>; // props.devices seems to be of type Node, not Device
 }
+
 export function DeviceList(props: Props) {
-	const [devices, setDevices] = useState<Device[]>([]);
-	const [remoteDevices, setRemoteDevices] = useState<Device[]>([]);
+	const [remoteDevices, setRemoteDevices] = useState<Device[]>();
 	const [stats, setStats] = useState<DeviceStats | null>(null);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [loading, setLoading] = useState(true);
@@ -74,54 +49,62 @@ export function DeviceList(props: Props) {
 	const router = useRouter();
 	const api = useApi();
 
-	useEffect(() => {
-		if (props.devices.length == 0) {
-			setDevices((devices) => devices.map((d) => ({ ...d, online: false })));
-		}
-		if (remoteDevices.length == 0) {
-			setDevices((devices) =>
-				devices.length
-					? devices
-					: props.devices.map((d) => ({ ...d, online: true })),
-			);
-			return;
-		}
+	const onlineDevicesMap = useMemo(() => {
+		const m = new Map<string, Node>();
+		props.devices.forEach((d) => m.set(d.mac, d));
 
-		setDevices((devices) => {
-			devices = remoteDevices.map((d) => ({ ...d, online: false }));
+		return m;
+	}, [props.devices]);
 
-			for (const node of props.devices) {
-				const index = devices.findIndex((d) => d.mac === node.mac);
+	const combinedDevices = useMemo(() => {
+		if (!remoteDevices?.length && !props.devices.length)
+			return new Map<string, Device>();
 
-				if (index >= 0) {
-					devices[index].online = true;
-				} else {
-					const newDevice = { ...node, id: node.socketId };
+		const combineDevicesMap = new Map<string, Device>();
 
-					// TODO: Remove ID from new device before adding
-					api.addDevice(newDevice);
+		remoteDevices?.forEach((d) => combineDevicesMap.set(d.mac, d));
 
-					devices.push(node);
-				}
+		for (const [id, device] of onlineDevicesMap) {
+			if (remoteDevices !== undefined && !combineDevicesMap.has(device.mac)) {
+				api.addDevice(device).then(() => fetchDevices());
 			}
 
-			return devices;
-		});
-	}, [remoteDevices, props.devices]);
+			combineDevicesMap.set(device.mac, {
+				...device,
+				id: device.socketId,
+				online: true,
+			});
+		}
 
-	const fetchDevices = async () => {
+		return combineDevicesMap;
+	}, [onlineDevicesMap, remoteDevices]);
+
+	// This useEffect will now simply update the local 'devices' state
+	// with the combined list calculated in useMemo.
+	// However, it's often more straightforward to directly use the useMemo value
+	// in your render, instead of useState for 'devices'.
+	// Let's re-think the 'devices' state. It's confusing to have 'devices' state AND
+	// a calculated 'combinedAndStatusDevices'.
+	// Let's remove the `devices` state and directly use the memoized value.
+
+	const fetchDevices = useCallback(async () => {
 		setLoading(true);
 		setError(null);
-		const response = await api.getDevices(searchTerm);
-		setLoading(false);
-
-		setRemoteDevices(response.devices ?? []);
-		setStats(response.stats ?? {});
-	};
+		try {
+			const response = await api.getDevices(searchTerm);
+			setRemoteDevices(response.devices ?? []);
+			setStats(response.stats ?? {});
+		} catch (err) {
+			console.error("Failed to fetch devices:", err);
+			setError("Failed to load devices. Please try again.");
+		} finally {
+			setLoading(false);
+		}
+	}, [searchTerm]);
 
 	useEffect(() => {
 		fetchDevices();
-	}, []);
+	}, [fetchDevices]); // Depend on fetchDevices (which is memoized with useCallback)
 
 	const handleSearch = () => {
 		fetchDevices();
@@ -195,18 +178,18 @@ export function DeviceList(props: Props) {
 						<p className="text-sm text-muted-foreground truncate">
 							Total Devices
 						</p>
-						<p className="text-2xl font-bold">{devices.length}</p>
+						<p className="text-2xl font-bold">{combinedDevices.size}</p>
 					</div>
 					<div className="bg-card rounded-lg p-4 shadow">
 						<p className="text-sm text-muted-foreground truncate">Online</p>
 						<p className="text-2xl font-bold text-green-500">
-							{props.devices.length}
+							{onlineDevicesMap.size}
 						</p>
 					</div>
 					<div className="bg-card rounded-lg p-4 shadow">
 						<p className="text-sm text-muted-foreground truncate">Offline</p>
 						<p className="text-2xl font-bold text-gray-500">
-							{devices.length - props.devices.length}
+							{combinedDevices.size - onlineDevicesMap.size}
 						</p>
 					</div>
 					<div className="bg-card rounded-lg p-4 shadow">
@@ -227,25 +210,27 @@ export function DeviceList(props: Props) {
 							<TableHead>
 								<div className="flex items-center space-x-1">
 									<span>Name</span>
+									{/* Consider adding sorting logic here if needed */}
 									<ArrowUpDown className="h-3 w-3" />
 								</div>
 							</TableHead>
 							<TableHead>Type</TableHead>
-							<TableHead>IP Address</TableHead>
+							<TableHead>IP</TableHead>
+							<TableHead>MAC</TableHead>
 							<TableHead>Status</TableHead>
-							{/* <TableHead>Last Seen</TableHead> */}
+							<TableHead>Manufacturer</TableHead>
 							<TableHead className="w-[80px]"></TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
-						{devices?.length === 0 ? (
+						{combinedDevices?.size === 0 ? (
 							<TableRow>
 								<TableCell colSpan={6} className="text-center py-8">
 									No devices found
 								</TableCell>
 							</TableRow>
 						) : (
-							devices.map((device) => (
+							combinedDevices.values().map((device) => (
 								<TableRow
 									key={device.id}
 									className="cursor-pointer hover:bg-muted/50"
@@ -262,6 +247,7 @@ export function DeviceList(props: Props) {
 									</TableCell>
 									<TableCell className="capitalize">{device.type}</TableCell>
 									<TableCell>{device.ip}</TableCell>
+									<TableCell>{device.mac}</TableCell>
 									<TableCell>
 										{device?.online ? (
 											<Badge className="bg-green-500 hover:bg-green-600">
@@ -275,7 +261,7 @@ export function DeviceList(props: Props) {
 											</Badge>
 										)}
 									</TableCell>
-									{/* <TableCell>{formatDate(device?.lastSeen ?? "")}</TableCell> */}
+									<TableCell>{device.manufacturer}</TableCell>
 									<TableCell>
 										<DropdownMenu>
 											<DropdownMenuTrigger
