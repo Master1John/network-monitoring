@@ -1,17 +1,7 @@
 import { Device, DeviceStats, Packet } from "@/types";
 
 //actions
-interface AppApi {
-	getDevices: (
-		searchTerm: string,
-	) => Promise<{ devices: Device[]; stats: DeviceStats }>;
-	addDevice: (device: Device) => Promise<Device | null>;
-	savePacket: (
-		deviceId: string,
-		packet: Packet,
-	) => Promise<{ success: string; message: string; packet: Packet }>;
-}
-export default function useApi(): AppApi {
+export default function useApi() {
 	async function getDevices(searchTerm: string) {
 		try {
 			const response = await fetch(
@@ -20,17 +10,23 @@ export default function useApi(): AppApi {
 			if (!response.ok) {
 				throw new Error(`Error fetching devices: ${response.statusText}`);
 			}
-			return await response.json();
+			return (await response.json()) as {
+				devices: Array<Device>;
+				stats: DeviceStats;
+			};
 		} catch (err) {
-			return { devices: [], stats: {} };
+			return new Promise(() => {}).then(() => ({
+				devices: [] as Array<Device>,
+				stats: { total: 0, offline: 0, online: 0, byType: {} } as DeviceStats,
+			}));
 		}
 	}
-	async function addDevice(device: Device) {
+	async function addDevice(device: Omit<Device | Node, "id" | "socketId">) {
 		const response = await fetch("/api/devices", {
 			method: "POST",
 			body: JSON.stringify(device),
 		});
-		return await response.json();
+		return (await response.json()) as Device | null;
 	}
 
 	async function savePacket(deviceId: string, packet: Packet) {
@@ -38,7 +34,11 @@ export default function useApi(): AppApi {
 			method: "POST",
 			body: JSON.stringify(packet),
 		});
-		return await response.json();
+		return (await response.json()) as {
+			success: string;
+			message: string;
+			packet: Packet;
+		};
 	}
 	return {
 		getDevices,

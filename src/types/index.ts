@@ -10,6 +10,7 @@ export interface Node {
 	mac: string;
 	os: string;
 	manufacturer: string;
+  model: string;
 	type: string;
 }
 
