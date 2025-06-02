@@ -1,51 +1,6 @@
 import { Activity, AlertTriangle, Clock, Laptop } from "lucide-react";
 
-const activities = [
-  {
-    id: 1,
-    type: "keylog",
-    device: "Workstation-001",
-    timestamp: "2 minutes ago",
-    description: "Keylog data received",
-    icon: Activity,
-  },
-  {
-    id: 2,
-    type: "alert",
-    device: "Laptop-003",
-    timestamp: "15 minutes ago",
-    description: "Unusual network activity detected",
-    icon: AlertTriangle,
-    severity: "critical",
-  },
-  {
-    id: 3,
-    type: "device",
-    device: "Desktop-007",
-    timestamp: "32 minutes ago",
-    description: "Device went offline",
-    icon: Laptop,
-  },
-  {
-    id: 4,
-    type: "alert",
-    device: "Server-002",
-    timestamp: "1 hour ago",
-    description: "High CPU usage",
-    icon: AlertTriangle,
-    severity: "warning",
-  },
-  {
-    id: 5,
-    type: "keylog",
-    device: "Laptop-005",
-    timestamp: "1 hour ago",
-    description: "Keylog data received",
-    icon: Activity,
-  },
-];
-
-export function RecentActivity() {
+export function RecentActivity({ activities }) {
   return (
     <div className="space-y-8">
       {activities.map((activity) => (

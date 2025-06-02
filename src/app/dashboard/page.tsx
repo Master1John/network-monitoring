@@ -84,7 +84,7 @@ export default async function DashboardPage() {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="alerts">Alerts</TabsTrigger>
+          {/* <TabsTrigger value="alerts">Alerts</TabsTrigger> */}
         </TabsList>
         <TabsContent value="overview" className="space-y-4">
           <Suspense fallback={<div>Loading overview...</div>}>
@@ -97,7 +97,7 @@ export default async function DashboardPage() {
               </CardHeader>
               <CardContent className="pl-2">
                 <Suspense fallback={<div>Loading activity...</div>}>
-                  <RecentActivity />
+                  <RecentActivity activities={data.userActivities} />
                 </Suspense>
               </CardContent>
             </Card>
@@ -116,19 +116,19 @@ export default async function DashboardPage() {
             {/* </Card> */}
           </div>
         </TabsContent>
-        <TabsContent value="alerts" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>System Alerts</CardTitle>
-              <CardDescription>Recent alerts and notifications</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Suspense fallback={<div>Loading alerts...</div>}>
-                <AlertsOverview />
-              </Suspense>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/* <TabsContent value="alerts" className="space-y-4"> */}
+        {/*   <Card> */}
+        {/*     <CardHeader> */}
+        {/*       <CardTitle>System Alerts</CardTitle> */}
+        {/*       <CardDescription>Recent alerts and notifications</CardDescription> */}
+        {/*     </CardHeader> */}
+        {/*     <CardContent> */}
+        {/*       <Suspense fallback={<div>Loading alerts...</div>}> */}
+        {/*         <AlertsOverview /> */}
+        {/*       </Suspense> */}
+        {/*     </CardContent> */}
+        {/*   </Card> */}
+        {/* </TabsContent> */}
       </Tabs>
     </div>
   );

@@ -40,7 +40,7 @@ export default function DevicesPage() {
         <h2 className="text-3xl font-bold tracking-tight">Devices</h2>
       </div>
       <div className="grid gap-4 md:grid-cols-7">
-        <Card className="col-span-7 md:col-span-4">
+        <Card className="col-span-7 ">
           <CardHeader>
             <CardTitle>Device List</CardTitle>
             <CardDescription>
