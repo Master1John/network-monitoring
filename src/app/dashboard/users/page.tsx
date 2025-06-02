@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 export default function UsersPage() {
   const [stats, setStats] = useState<{ total: number; active: number }>([]);
   const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState([]);
 
   useEffect(() => {
     async function fetchUsers() {
@@ -26,7 +27,11 @@ export default function UsersPage() {
           setStats(data.stats);
         }
 
-        console.log(data.stats);
+        if (data.userActivities) {
+          setActivities(data.activities);
+        }
+
+        console.log(data);
       } catch (error) {
         console.error("Failed to fetch users stats:", error);
       } finally {
@@ -119,7 +124,7 @@ export default function UsersPage() {
         </CardHeader>
         <CardContent>
           <Suspense fallback={<div>Loading activity...</div>}>
-            <UserActivity />
+            <UserActivity activitites={activities} />
           </Suspense>
         </CardContent>
       </Card>

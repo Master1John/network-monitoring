@@ -46,6 +46,8 @@ export async function GET(request: Request) {
       },
     });
 
+    const userActivities = await prisma.userActivity.findMany();
+
     // Add device count to each user
     const usersWithDeviceCount = users.map((user) => ({
       ...user,
@@ -83,6 +85,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       users: usersWithDeviceCount,
       stats,
+      userActivities,
     });
   } catch (error) {
     console.error("Error fetching users:", error);

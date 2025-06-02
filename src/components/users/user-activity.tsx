@@ -31,100 +31,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 // Sample activity data
-const activities = [
-  {
-    id: "act-001",
-    userId: "user-001",
-    userName: "John Doe",
-    action: "login",
-    details: "Logged in from 192.168.1.101",
-    timestamp: "2023-04-06T10:45:00",
-    severity: "info",
-  },
-  {
-    id: "act-002",
-    userId: "user-003",
-    userName: "Robert Johnson",
-    action: "settings",
-    details: "Changed security settings",
-    timestamp: "2023-04-06T10:40:00",
-    severity: "info",
-  },
-  {
-    id: "act-003",
-    userId: "user-002",
-    userName: "Jane Smith",
-    action: "user",
-    details: "Created new user account for Thomas Anderson",
-    timestamp: "2023-04-06T10:35:00",
-    severity: "info",
-  },
-  {
-    id: "act-004",
-    userId: "user-008",
-    userName: "Lisa Wilson",
-    action: "login",
-    details: "Failed login attempt (3rd attempt)",
-    timestamp: "2023-04-06T10:30:00",
-    severity: "warning",
-  },
-  {
-    id: "act-005",
-    userId: "user-012",
-    userName: "Jennifer White",
-    action: "security",
-    details: "Reset password for user Michael Brown",
-    timestamp: "2023-04-06T10:25:00",
-    severity: "info",
-  },
-  {
-    id: "act-006",
-    userId: "user-008",
-    userName: "Lisa Wilson",
-    action: "locked",
-    details: "Account locked due to multiple failed login attempts",
-    timestamp: "2023-04-06T10:20:00",
-    severity: "critical",
-  },
-  {
-    id: "act-007",
-    userId: "user-004",
-    userName: "Sarah Williams",
-    action: "device",
-    details: "Added new device: MacBook Pro",
-    timestamp: "2023-04-06T10:15:00",
-    severity: "info",
-  },
-  {
-    id: "act-008",
-    userId: "user-001",
-    userName: "John Doe",
-    action: "settings",
-    details: "Updated network monitoring rules",
-    timestamp: "2023-04-06T10:10:00",
-    severity: "info",
-  },
-  {
-    id: "act-009",
-    userId: "user-003",
-    userName: "Robert Johnson",
-    action: "security",
-    details: "Enabled two-factor authentication",
-    timestamp: "2023-04-06T10:05:00",
-    severity: "info",
-  },
-  {
-    id: "act-010",
-    userId: "user-002",
-    userName: "Jane Smith",
-    action: "login",
-    details: "Logged in from new location: 203.0.113.42",
-    timestamp: "2023-04-06T10:00:00",
-    severity: "warning",
-  },
-];
 
-export function UserActivity() {
+export function UserActivity({ activities }) {
   const [filter, setFilter] = useState("all");
 
   const filteredActivities =
@@ -235,7 +143,7 @@ export function UserActivity() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredActivities.map((activity) => (
+            {filteredActivities?.map((activity) => (
               <TableRow key={activity.id}>
                 <TableCell>
                   <div className="flex items-center gap-3">
