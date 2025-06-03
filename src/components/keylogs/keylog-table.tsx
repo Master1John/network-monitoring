@@ -253,9 +253,9 @@ export function KeylogTable() {
               </TableHead>
               <TableHead>Device</TableHead>
               <TableHead>Timestamp</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Content</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>MAC</TableHead>
+              <TableHead>Keys</TableHead>
+              <TableHead>Actions</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
@@ -299,17 +299,17 @@ export function KeylogTable() {
                   </TableCell>
                   <TableCell>{keylog.device}</TableCell>
                   <TableCell>{formatDate(keylog.timestamp)}</TableCell>
-                  <TableCell>{keylog.type}</TableCell>
+                  <TableCell>{keylog.mac}</TableCell>
                   <TableCell className="max-w-[200px] truncate">
-                    {keylog.content}
+                    {keylog.keys}
                   </TableCell>
-                  <TableCell>
-                    {keylog.flagged ? (
-                      <Badge variant="destructive">Flagged</Badge>
-                    ) : (
-                      <Badge variant="outline">Normal</Badge>
-                    )}
-                  </TableCell>
+                  {/* <TableCell> */}
+                  {/*   {keylog.flagged ? ( */}
+                  {/*     <Badge variant="destructive">Flagged</Badge> */}
+                  {/*   ) : ( */}
+                  {/*     <Badge variant="outline">Normal</Badge> */}
+                  {/*   )} */}
+                  {/* </TableCell> */}
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -324,10 +324,10 @@ export function KeylogTable() {
                           <Eye className="mr-2 h-4 w-4" />
                           <span>View Details</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Flag className="mr-2 h-4 w-4" />
-                          <span>{keylog.flagged ? "Unflag" : "Flag"}</span>
-                        </DropdownMenuItem>
+                        {/* <DropdownMenuItem> */}
+                        {/*   <Flag className="mr-2 h-4 w-4" /> */}
+                        {/*   <span>{keylog.flagged ? "Unflag" : "Flag"}</span> */}
+                        {/* </DropdownMenuItem> */}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem>
                           <Download className="mr-2 h-4 w-4" />

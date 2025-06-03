@@ -62,7 +62,7 @@ export default async function DashboardPage() {
             <CardTitle className="text-sm font-medium">Total Devices</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.stats?.total}</div>
+            <div className="text-2xl font-bold">{data.stats?.total ?? 0}</div>
             <p className="text-xs text-muted-foreground">{} from last week</p>
           </CardContent>
         </Card>
@@ -73,7 +73,7 @@ export default async function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.stats?.online}</div>
+            <div className="text-2xl font-bold">{data.stats?.online ?? 0}</div>
             <p className="text-xs text-muted-foreground">
               {(data.stats?.online / data.stats?.total) * 100} from the total
               devices

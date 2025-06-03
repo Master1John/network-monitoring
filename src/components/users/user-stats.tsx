@@ -1,5 +1,3 @@
-"use client";
-
 import {
   Cell,
   Legend,
@@ -9,18 +7,6 @@ import {
   Tooltip,
 } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
-
-const roleData = [
-  { name: "Admin", value: 3 },
-  { name: "Security", value: 1 },
-  { name: "User", value: 8 },
-];
-
-const statusData = [
-  { name: "Active", value: 8 },
-  { name: "Inactive", value: 3 },
-  { name: "Locked", value: 1 },
-];
 
 const ROLE_COLORS = [
   "hsl(var(--primary))",
@@ -33,7 +19,17 @@ const STATUS_COLORS = [
   "hsl(var(--destructive))",
 ];
 
-export function UserStats() {
+export function UserStats({ stats }) {
+  const roleData = [
+    { name: "Admin", value: stats?.admin },
+    { name: "Security", value: 1 },
+    { name: "User", value: stats?.total },
+  ];
+
+  const statusData = [
+    { name: "Active", value: stats?.active },
+    { name: "Inactive", value: stats?.total - stats?.active },
+  ];
   return (
     <div className="space-y-6">
       <div>

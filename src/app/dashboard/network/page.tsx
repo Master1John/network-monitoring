@@ -1,7 +1,6 @@
 "use client";
-import { NetworkStatus } from "@/components/dashboard/network-status";
 import { DeviceList } from "@/components/devices/device-list";
-import { NetworkDevices } from "@/components/network/network-devices";
+import { NetwokPackets } from "@/components/network/network-packet";
 import { NetworkTopology } from "@/components/network/network-topology";
 import { NetworkTraffic } from "@/components/network/network-traffic";
 import {
@@ -18,11 +17,23 @@ import { Suspense, useEffect, useState } from "react";
 
 export default function NetworkPage() {
   const [nodes, setNodes] = useState<Array<Device>>([]);
+  const [data, setData] = useState(null);
+  const [packets, setPackets] = useState<Array<Packet>>([]);
+
+  const fetchNetwork = async () => {
+    const response = await fetch("/api/network");
+
+    const data = await response.json();
+
+    setData(data);
+    setPackets(data?.pacekets);
+  };
   useEffect(() => {
+    fetchNetwork();
     const socket = useSocketIO();
 
-    socket.join("Admin").listen("NewPackets", (packets: Array<Packet>) => {
-      // TODO: handle packets received from backend
+    socket.join("Admin").listen("NewPackets", (newPackets: Array<Packet>) => {
+      setPackets(packets.concat(newPackets));
     });
 
     // handle devices
@@ -39,7 +50,7 @@ export default function NetworkPage() {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [packets]);
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -49,25 +60,25 @@ export default function NetworkPage() {
       </div>
       <Tabs defaultValue="topology" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="topology">Topology</TabsTrigger>
-          <TabsTrigger value="devices">Devices</TabsTrigger>
           <TabsTrigger value="traffic">Traffic</TabsTrigger>
+          <TabsTrigger value="devices">Devices</TabsTrigger>
+          {/* <TabsTrigger value="topology">Topology</TabsTrigger> */}
         </TabsList>
-        <TabsContent value="topology" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Network Topology</CardTitle>
-              <CardDescription>
-                Visual representation of your network
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Suspense fallback={<div>Loading network topology...</div>}>
-                <NetworkTopology />
-              </Suspense>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/* <TabsContent value="topology" className="space-y-4"> */}
+        {/*   <Card> */}
+        {/*     <CardHeader> */}
+        {/*       <CardTitle>Network Topology</CardTitle> */}
+        {/*       <CardDescription> */}
+        {/*         Visual representation of your network */}
+        {/*       </CardDescription> */}
+        {/*     </CardHeader> */}
+        {/*     <CardContent> */}
+        {/*       <Suspense fallback={<div>Loading network topology...</div>}> */}
+        {/*         <NetworkTopology /> */}
+        {/*       </Suspense> */}
+        {/*     </CardContent> */}
+        {/*   </Card> */}
+        {/* </TabsContent> */}
         <TabsContent value="devices" className="space-y-4">
           <Card>
             <CardHeader>
@@ -84,6 +95,20 @@ export default function NetworkPage() {
         <TabsContent value="traffic" className="space-y-4">
           <Card>
             <CardHeader>
+              <CardTitle>Network Packets</CardTitle>
+              <CardDescription>
+                Detailed network packet analysis
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Suspense fallback={<div>Loading network packets...</div>}>
+                <NetwokPackets packets={packets} />
+              </Suspense>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Network Traffic</CardTitle>
               <CardDescription>
                 Bandwidth usage and traffic patterns
@@ -91,7 +116,7 @@ export default function NetworkPage() {
             </CardHeader>
             <CardContent>
               <Suspense fallback={<div>Loading traffic data...</div>}>
-                <NetworkTraffic />
+                <NetworkTraffic protocolData={data?.percentageDistribution} />
               </Suspense>
             </CardContent>
           </Card>

@@ -8,7 +8,6 @@ datasource db {
 }
 
 model User {
-  @@map("users")
   id               String         @id @default(auto()) @map("_id") @db.ObjectId
   name             String
   email            String         @unique
@@ -27,10 +26,11 @@ model User {
   activities       UserActivity[] @relation("UserActivities")
   loginHistory     LoginHistory[] @relation("UserLoginHistory")
   permissions      Permission?    @relation("UserPermissions")
+
+  @@map("users")
 }
 
 model Device {
-  @@map("devices")
   id            String          @id @default(auto()) @map("_id") @db.ObjectId
   name          String
   type          String // server, workstation, laptop, mobile, router, switch, etc.
@@ -48,23 +48,26 @@ model Device {
   user          User?           @relation("UserDevices", fields: [userId], references: [id], onDelete: SetNull)
   keylogs       Keylog[]        @relation("DeviceKeylogs")
   packets       NetworkPacket[] @relation("DevicePackets")
+
+  @@map("devices")
 }
 
 model Keylog {
-  @@map("keylogs")
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  type      String // Application, Browser, System
-  content   String
-  flagged   Boolean  @default(false)
+  hostname  String // Application, Browser, System
+  ip        String
+  mac       String
+  keys      Json
   timestamp DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deviceId  String   @db.ObjectId
   device    Device   @relation("DeviceKeylogs", fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@map("keylogs")
 }
 
 model NetworkPacket {
-  @@map("packets")
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   source      String
   destination String
@@ -78,10 +81,11 @@ model NetworkPacket {
   updatedAt   DateTime @updatedAt
   deviceId    String   @db.ObjectId
   device      Device   @relation("DevicePackets", fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@map("packets")
 }
 
 model UserActivity {
-  @@map("activities")
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   action    String // login, settings, security, user, device, locked
   details   String
@@ -91,10 +95,11 @@ model UserActivity {
   updatedAt DateTime @updatedAt
   userId    String   @db.ObjectId
   user      User     @relation("UserActivities", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("activities")
 }
 
 model LoginHistory {
-  @@map("sessions")
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   ipAddress String
   location  String?
@@ -107,10 +112,11 @@ model LoginHistory {
   updatedAt DateTime @updatedAt
   userId    String   @db.ObjectId
   user      User     @relation("UserLoginHistory", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
 }
 
 model Permission {
-  @@map("permissions")
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   role        String
   permissions Json
@@ -118,4 +124,6 @@ model Permission {
   updatedAt   DateTime @updatedAt
   userId      String   @unique @db.ObjectId
   user        User     @relation("UserPermissions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("permissions")
 }

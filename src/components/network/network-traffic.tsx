@@ -57,16 +57,16 @@ const dailyData = [
   { day: "Sat", inbound: 60, outbound: 40, peak: 80 },
   { day: "Sun", inbound: 55, outbound: 35, peak: 75 },
 ];
+//
+// const protocolData = [
+//   { name: "HTTP/HTTPS", value: 65 },
+//   { name: "SSH/SFTP", value: 15 },
+//   { name: "FTP", value: 5 },
+//   { name: "SMTP/POP3", value: 8 },
+//   { name: "Other", value: 7 },
+// ];
 
-const protocolData = [
-  { name: "HTTP/HTTPS", value: 65 },
-  { name: "SSH/SFTP", value: 15 },
-  { name: "FTP", value: 5 },
-  { name: "SMTP/POP3", value: 8 },
-  { name: "Other", value: 7 },
-];
-
-export function NetworkTraffic() {
+export function NetworkTraffic({ protocolData }) {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="hourly" className="w-full">
@@ -141,37 +141,37 @@ export function NetworkTraffic() {
             </ResponsiveContainer>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle>Current Bandwidth</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">45.8 Mbps</div>
-                <p className="text-xs text-muted-foreground">
-                  Total network throughput
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle>Peak Today</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">85.2 Mbps</div>
-                <p className="text-xs text-muted-foreground">At 10:15 AM</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle>Total Transferred</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">1.45 TB</div>
-                <p className="text-xs text-muted-foreground">
-                  In the last 24 hours
-                </p>
-              </CardContent>
-            </Card>
+            {/* <Card> */}
+            {/*   <CardHeader className="pb-2"> */}
+            {/*     <CardTitle>Current Bandwidth</CardTitle> */}
+            {/*   </CardHeader> */}
+            {/*   <CardContent> */}
+            {/*     <div className="text-2xl font-bold">45.8 Mbps</div> */}
+            {/*     <p className="text-xs text-muted-foreground"> */}
+            {/*       Total network throughput */}
+            {/*     </p> */}
+            {/*   </CardContent> */}
+            {/* </Card> */}
+            {/* <Card> */}
+            {/*   <CardHeader className="pb-2"> */}
+            {/*     <CardTitle>Peak Today</CardTitle> */}
+            {/*   </CardHeader> */}
+            {/*   <CardContent> */}
+            {/*     <div className="text-2xl font-bold">85.2 Mbps</div> */}
+            {/*     <p className="text-xs text-muted-foreground">At 10:15 AM</p> */}
+            {/*   </CardContent> */}
+            {/* </Card> */}
+            {/* <Card> */}
+            {/*   <CardHeader className="pb-2"> */}
+            {/*     <CardTitle>Total Transferred</CardTitle> */}
+            {/*   </CardHeader> */}
+            {/*   <CardContent> */}
+            {/*     <div className="text-2xl font-bold">1.45 TB</div> */}
+            {/*     <p className="text-xs text-muted-foreground"> */}
+            {/*       In the last 24 hours */}
+            {/*     </p> */}
+            {/*   </CardContent> */}
+            {/* </Card> */}
           </div>
         </TabsContent>
         <TabsContent value="daily" className="space-y-4">
@@ -254,16 +254,18 @@ export function NetworkTraffic() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {protocolData.map((item) => (
-              <div key={item.name} className="space-y-2">
+            {protocolData?.map((item) => (
+              <div key={item.protocol} className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">{item.name}</p>
-                  <p className="text-sm font-medium">{item.value}%</p>
+                  <p className="text-sm font-medium">{item.protocol}</p>
+                  <p className="text-sm font-medium">
+                    {item.percentage ?? 0}% ({item.count})
+                  </p>
                 </div>
                 <div className="h-2 w-full rounded-full bg-muted">
                   <div
                     className="h-full rounded-full bg-primary"
-                    style={{ width: `${item.value}%` }}
+                    style={{ width: `${item.percentage ?? 0}%` }}
                   />
                 </div>
               </div>

@@ -59,6 +59,7 @@ export async function GET(request: Request) {
     const stats = {
       total: users.length,
       active: users.filter((user) => user.status === "active").length,
+      admin: users.filter((user) => user.role === "admin").length,
       inactive: users.filter((user) => user.status === "inactive").length,
       locked: users.filter((user) => user.status === "locked").length,
       byRole: {} as Record<string, number>,
@@ -100,6 +101,7 @@ export async function POST(request: Request) {
   try {
     const userData = await request.json();
 
+    //
     // Validate required fields
     if (!userData.name || !userData.email || !userData.role) {
       return NextResponse.json(

@@ -47,7 +47,7 @@ export default function UsersPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Users</h2>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -63,7 +63,9 @@ export default function UsersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.active}</div>
-            <p className="text-xs text-muted-foreground">67% of total users</p>
+            <p className="text-xs text-muted-foreground">
+              {Number(stats.active / stats.total) * 100}% of total users
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -71,26 +73,13 @@ export default function UsersPage() {
             <CardTitle className="text-sm font-medium">Admin Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">{stats.admin}</div>
             <p className="text-xs text-muted-foreground">25% of total users</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Locked Accounts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">1</div>
-            <p className="text-xs text-muted-foreground">
-              Due to security policy
-            </p>
           </CardContent>
         </Card>
       </div>
       <div className="grid gap-4 md:grid-cols-7">
-        <Card className="col-span-7 md:col-span-4">
+        <Card className="col-span-7 ">
           <CardHeader>
             <CardTitle>User List</CardTitle>
             <CardDescription>
@@ -103,7 +92,7 @@ export default function UsersPage() {
             </Suspense>
           </CardContent>
         </Card>
-        <Card className="col-span-7 md:col-span-3">
+        <Card className="col-span-7 ">
           <CardHeader>
             <CardTitle>User Statistics</CardTitle>
             <CardDescription>
@@ -112,7 +101,7 @@ export default function UsersPage() {
           </CardHeader>
           <CardContent>
             <Suspense fallback={<div>Loading statistics...</div>}>
-              <UserStats />
+              <UserStats stats={stats} />
             </Suspense>
           </CardContent>
         </Card>
