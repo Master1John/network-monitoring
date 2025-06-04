@@ -54,6 +54,7 @@ model Device {
 
 model Keylog {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  deviceId  String   @db.ObjectId
   hostname  String // Application, Browser, System
   ip        String
   mac       String
@@ -61,7 +62,6 @@ model Keylog {
   timestamp DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  deviceId  String   @db.ObjectId
   device    Device   @relation("DeviceKeylogs", fields: [deviceId], references: [id], onDelete: Cascade)
 
   @@map("keylogs")
@@ -69,13 +69,11 @@ model Keylog {
 
 model NetworkPacket {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  source      String
-  destination String
   protocol    String
-  port        Int?
-  size        Int?
-  direction   String // inbound, outbound
-  status      String   @default("success") // success, blocked
+  interface   String
+  src         Json
+  dest        Json
+  data        Int?
   timestamp   DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

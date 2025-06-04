@@ -65,11 +65,11 @@ export function DeviceList(props: Props) {
 		remoteDevices?.forEach((d) => combineDevicesMap.set(d.mac, d));
 
 		for (const [id, device] of onlineDevicesMap) {
-			if (remoteDevices !== undefined && !combineDevicesMap.has(device.mac)) {
+			if (remoteDevices !== undefined && !combineDevicesMap.has(id)) {
 				api.addDevice(device).then(() => fetchDevices());
 			}
 
-			combineDevicesMap.set(device.mac, {
+			combineDevicesMap.set(id, {
 				...device,
 				id: device.socketId,
 				online: true,
