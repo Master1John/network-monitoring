@@ -39,14 +39,13 @@ import {
 } from "@/components/ui/dialog";
 import { Packet } from "@/types";
 
-export function NetwokPackets({
-	packets,
-	limit,
-}: {
+interface Props {
 	packets: Packet[];
 	limit?: number;
-}) {
-	const [loading, setLoading] = useState(true);
+}
+
+export function NetwokPackets(props: Props) {
+	const [packets, setPackets] = useState<Packet[]>([]);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [selectedPacket, setSelectedPacket] = useState<Packet | null>(null);
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -62,6 +61,10 @@ export function NetwokPackets({
 			timeStyle: "short",
 		}).format(date);
 	};
+
+	useEffect(() => {
+		setPackets((pkts) => pkts.concat(props.packets));
+	}, [props.packets]);
 
 	const formatSize = (bytes: number) => {
 		if (bytes < 1024) return `${bytes} B`;
@@ -80,7 +83,7 @@ export function NetwokPackets({
 
 	return (
 		<div>
-			{!limit && (
+			{!props.limit && (
 				<div className="flex items-center justify-between py-4">
 					<div className="flex items-center gap-2">
 						<Search className="h-4 w-4 text-muted-foreground" />
@@ -120,7 +123,7 @@ export function NetwokPackets({
 							<TableHead>Size</TableHead>
 							<TableHead>Direction</TableHead>
 							<TableHead>Status</TableHead>
-							{!limit && <TableHead className="w-[80px]"></TableHead>}
+							{!props.limit && <TableHead className="w-[80px]"></TableHead>}
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -163,7 +166,7 @@ export function NetwokPackets({
 										</Badge>
 									)}
 								</TableCell>
-								{!limit && (
+								{!props.limit && (
 									<TableCell>
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
