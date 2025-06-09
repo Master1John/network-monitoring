@@ -58,106 +58,15 @@ interface KeylogResponse {
   stats: KeylogStats;
 }
 
-export function DeviceKeylogs({
-  deviceId,
-  limit,
-}: {
-  deviceId: string;
-  limit?: number;
-}) {
-  const [keylogs, setKeylogs] = useState<Keylog[]>([]);
-  const [stats, setStats] = useState<KeylogStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function DeviceKeylogs({ device }: { device: Device }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedKeylog, setSelectedKeylog] = useState<Keylog | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-
-  const fetchKeylogs = async () => {
-    try {
-      setLoading(true);
-      const queryParams = new URLSearchParams();
-      if (limit) queryParams.append("limit", limit.toString());
-
-      const response = await fetch(
-        `/api/devices/${deviceId}/keylogs?${queryParams.toString()}`,
-      );
-      if (!response.ok) {
-        throw new Error(`Error fetching keylogs: ${response.statusText}`);
-      }
-
-      const data: KeylogResponse = await response.json();
-      setKeylogs(data.keylogs);
-      setStats(data.stats);
-    } catch (err) {
-      console.error("Failed to fetch keylogs:", err);
-      setError("Failed to load keylogs. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchKeylogs();
-  }, [deviceId, limit]);
-
-  const filteredKeylogs = keylogs.filter(
-    (keylog) =>
-      keylog.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      keylog.type.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-US", {
-      dateStyle: "short",
-      timeStyle: "short",
-    }).format(date);
-  };
 
   const handleViewKeylog = (keylog: Keylog) => {
     setSelectedKeylog(keylog);
     setDialogOpen(true);
   };
-
-  const handleFlagKeylog = async (keylog: Keylog) => {
-    try {
-      const response = await fetch(
-        `/api/devices/${deviceId}/keylogs/${keylog.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            flagged: !keylog.flagged,
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`Error updating keylog: ${response.statusText}`);
-      }
-
-      // Refresh keylogs after update
-      fetchKeylogs();
-    } catch (err) {
-      console.error("Failed to update keylog:", err);
-      // Show error message to user
-    }
-  };
-
-  if (loading) {
-    return <div>Loading keylogs...</div>;
-  }
-
-  if (error) {
-    return <div className="text-red-500">{error}</div>;
-  }
-
-  if (keylogs.length === 0) {
-    return <div>No keylog data available for this device.</div>;
-  }
 
   return (
     <div>

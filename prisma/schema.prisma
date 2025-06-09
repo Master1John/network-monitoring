@@ -46,7 +46,6 @@ model Device {
   updatedAt     DateTime        @updatedAt
   userId        String?         @db.ObjectId
   user          User?           @relation("UserDevices", fields: [userId], references: [id], onDelete: SetNull)
-  keylogs       Keylog[]        @relation("DeviceKeylogs")
   packets       NetworkPacket[] @relation("DevicePackets")
 
   @@map("devices")
@@ -54,7 +53,6 @@ model Device {
 
 model Keylog {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  deviceId  String   @db.ObjectId
   hostname  String // Application, Browser, System
   ip        String
   mac       String
@@ -62,23 +60,22 @@ model Keylog {
   timestamp DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  device    Device   @relation("DeviceKeylogs", fields: [deviceId], references: [id], onDelete: Cascade)
 
   @@map("keylogs")
 }
 
 model NetworkPacket {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  protocol    String
-  interface   String
-  src         Json
-  dest        Json
-  data        Int?
-  timestamp   DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deviceId    String   @db.ObjectId
-  device      Device   @relation("DevicePackets", fields: [deviceId], references: [id], onDelete: Cascade)
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  protocol  String
+  interface String
+  src       Json
+  dest      Json
+  data      Int?
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deviceId  String   @db.ObjectId
+  device    Device   @relation("DevicePackets", fields: [deviceId], references: [id], onDelete: Cascade)
 
   @@map("packets")
 }

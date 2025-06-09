@@ -29,16 +29,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-
-type Keylog = {
-  id: string;
-  device: string;
-  deviceId: string;
-  timestamp: string;
-  type: string;
-  content: string;
-  flagged: boolean;
-};
+import { Keylog } from "@/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
 
 type PaginationInfo = {
   total: number;
@@ -53,12 +51,19 @@ export function KeylogTable() {
   const [error, setError] = useState<string | null>(null);
   const [sorting, setSorting] = useState<"asc" | "desc">("desc");
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [selectedKeylog, setSelectedKeylog] = useState<Keylog | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [pagination, setPagination] = useState<PaginationInfo>({
     total: 0,
     limit: 100,
     skip: 0,
     hasMore: false,
   });
+
+  const handleviewNKeylog = (keylog: Keylog) => {
+    setSelectedKeylog(keylog);
+    setDialogOpen(true);
+  };
 
   const fetchKeylogs = async () => {
     setLoading(true);
@@ -132,47 +137,6 @@ export function KeylogTable() {
     setKeylogs(sortedKeylogs);
   };
 
-  const handleFlagSelected = async () => {
-    try {
-      // Update the UI optimistically
-      const updatedKeylogs = keylogs.map((keylog) =>
-        selectedRows.includes(keylog.id)
-          ? { ...keylog, flagged: true }
-          : keylog,
-      );
-      setKeylogs(updatedKeylogs);
-
-      // Make API calls to update the flagged status in the database
-      const updatePromises = selectedRows.map(async (id) => {
-        const keylog = keylogs.find((k) => k.id === id);
-        if (!keylog) return null;
-
-        const response = await fetch(`/api/keylogs/${id}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ flagged: true }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to update keylog ${id}`);
-        }
-
-        return response.json();
-      });
-
-      await Promise.all(updatePromises);
-
-      // Reset selection
-      setSelectedRows([]);
-    } catch (error) {
-      console.error("Failed to flag keylogs:", error);
-      // Refresh to get the current state from the server
-      fetchKeylogs();
-    }
-  };
-
   const loadMore = () => {
     if (pagination.hasMore) {
       setPagination((prev) => ({
@@ -186,16 +150,6 @@ export function KeylogTable() {
     <div>
       <div className="flex items-center justify-between py-4">
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1"
-            disabled={selectedRows.length === 0 || loading}
-            onClick={handleFlagSelected}
-          >
-            <Flag className="h-3.5 w-3.5" />
-            <span>Flag Selected</span>
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -301,7 +255,9 @@ export function KeylogTable() {
                   <TableCell>{formatDate(keylog.timestamp)}</TableCell>
                   <TableCell>{keylog.mac}</TableCell>
                   <TableCell className="max-w-[200px] truncate">
-                    {keylog.keys}
+                    {keylog.keys.map((value, index) => (
+                      <span key={index}>{value.key}</span>
+                    ))}
                   </TableCell>
                   {/* <TableCell> */}
                   {/*   {keylog.flagged ? ( */}
@@ -320,7 +276,9 @@ export function KeylogTable() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleviewNKeylog(keylog)}
+                        >
                           <Eye className="mr-2 h-4 w-4" />
                           <span>View Details</span>
                         </DropdownMenuItem>
@@ -347,6 +305,54 @@ export function KeylogTable() {
             )}
           </TableBody>
         </Table>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>keystroke Details</DialogTitle>
+              <DialogDescription>
+                Detailed information about the selected network packet
+              </DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[400px] overflow-y-scroll">
+              {selectedKeylog && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        ID
+                      </p>
+                      <p>{selectedKeylog.id}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Timestamp
+                      </p>
+                      <p>{formatDate(selectedKeylog.timestamp)}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        keystroke
+                      </p>
+                      {selectedKeylog.keys.map((value, index: number) => (
+                        <Badge key={index}>
+                          {value.key + ": " + formatDate(value.timestamp)}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {pagination.hasMore && !loading && (

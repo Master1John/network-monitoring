@@ -19,7 +19,6 @@ export default function KeylogsPage() {
       <Tabs defaultValue="all" className="space-y-4">
         <TabsList>
           <TabsTrigger value="all">All Devices</TabsTrigger>
-          <TabsTrigger value="flagged">Flagged Events</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
         <TabsContent value="all" className="space-y-4">
@@ -34,21 +33,6 @@ export default function KeylogsPage() {
               <Suspense fallback={<div>Loading keylog data...</div>}>
                 <KeylogTable />
               </Suspense>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="flagged" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Flagged Keylog Events</CardTitle>
-              <CardDescription>
-                Keylog events that have been flagged for review
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border p-4">
-                <p>Flagged events will be displayed here</p>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

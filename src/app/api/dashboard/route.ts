@@ -54,9 +54,6 @@ export async function GET(
     }));
 
     const stats = {
-      total: devices.length,
-      online: devices.filter((device) => device.status === "online").length,
-      offline: devices.filter((device) => device.status === "offline").length,
       byType: {} as Record<string, number>,
     };
 
@@ -68,7 +65,13 @@ export async function GET(
       stats.byType[device.type]++;
     });
 
-    return NextResponse.json({ stats, chatData, userActivities });
+    return NextResponse.json({
+      packets,
+      stats,
+      devices,
+      chatData,
+      userActivities,
+    });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to fetch device:" + error },

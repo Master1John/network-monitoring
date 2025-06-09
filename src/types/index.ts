@@ -1,6 +1,10 @@
 export interface Keylog {
-  keystroke: string;
-  timestamp: number;
+  id: string;
+  keys: {
+    key: string;
+    timestamp: string;
+  };
+  timestamp: string;
 }
 
 export interface Node {

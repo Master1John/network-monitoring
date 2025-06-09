@@ -1,4 +1,5 @@
-import { Suspense } from "react";
+"use client";
+import { useEffect, useState, Suspense } from "react";
 import {
   Card,
   CardContent,
@@ -9,51 +10,49 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Overview } from "@/components/dashboard/overview";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
-import { DeviceStats } from "@/components/dashboard/device-stats";
-import { NetworkStatus } from "@/components/dashboard/network-status";
-import { AlertsOverview } from "@/components/dashboard/alerts-overview";
+import useSocketIO from "@/hooks/useSocketIO";
+import { Device, Packet } from "@/types";
 
-// const chartData = [
-//   {
-//     name: "Mon",
-//     "Network Traffic": 4000,
-//     "Keylog Events": 2400,
-//   },
-//   {
-//     name: "Tue",
-//     "Network Traffic": 3000,
-//     "Keylog Events": 1398,
-//   },
-//   {
-//     name: "Wed",
-//     "Network Traffic": 2000,
-//     "Keylog Events": 9800,
-//   },
-//   {
-//     name: "Thu",
-//     "Network Traffic": 2780,
-//     "Keylog Events": 3908,
-//   },
-//   {
-//     name: "Fri",
-//     "Network Traffic": 1890,
-//     "Keylog Events": 4800,
-//   },
-//   {
-//     name: "Sat",
-//     "Network Traffic": 2390,
-//     "Keylog Events": 3800,
-//   },
-//   {
-//     name: "Sun",
-//     "Network Traffic": 3490,
-//     "Keylog Events": 4300,
-//   },
-// ];
-export default async function DashboardPage() {
-  const response = await fetch("http://localhost:3000/api/dashboard");
-  const data = await response.json();
-  console.log(data);
+export default function DashboardPage() {
+  const [nodes, setNodes] = useState<Array<Device>>([]);
+  const [devices, setDevices] = useState<Array<Device>>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [chartData, setChartData] = useState<any>(null);
+  const [userActivities, setUserActivities] = useState<any>(null);
+
+  const [data, setData] = useState<any>(null);
+
+  const fetchDashboard = async () => {
+    const response = await fetch("/api/dashboard");
+
+    const data = (await response.json()) as { packets: Array<Packet> };
+
+    setData(data);
+    setStats(data?.stats);
+    setChartData(data?.chartData);
+    setUserActivities(data?.userActivities);
+    setDevices(data?.devices);
+  };
+
+  useEffect(() => {
+    const socket = useSocketIO();
+    fetchDashboard().finally(() => {
+      socket
+        .join("Admin")
+        .here(() => {})
+        .listen("Node", (node: Node) => {
+          setNodes((nodes) => [...nodes, { ...node, id: node.socketId }]);
+        })
+        .listen("Nodes", (nodes: Array<Node>) => {
+          setNodes(nodes.map((n) => ({ ...n, id: n.socketId })));
+        });
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 md:grid-cols-2">
@@ -62,7 +61,9 @@ export default async function DashboardPage() {
             <CardTitle className="text-sm font-medium">Total Devices</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.stats?.total ?? 0}</div>
+            <div className="text-2xl font-bold">
+              {devices.length + nodes.length}
+            </div>
             <p className="text-xs text-muted-foreground">{} from last week</p>
           </CardContent>
         </Card>
@@ -73,10 +74,12 @@ export default async function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.stats?.online ?? 0}</div>
+            <div className="text-2xl font-bold text-green-500">
+              {nodes.length}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {(data.stats?.online / data.stats?.total) * 100} from the total
-              devices
+              {(nodes.length / (nodes.length + devices.length)) * 100} from the
+              total devices
             </p>
           </CardContent>
         </Card>
@@ -88,7 +91,7 @@ export default async function DashboardPage() {
         </TabsList>
         <TabsContent value="overview" className="space-y-4">
           <Suspense fallback={<div>Loading overview...</div>}>
-            <Overview data={data.chartData} />
+            <Overview data={chartData} />
           </Suspense>
           <div className="">
             <Card className="">
@@ -97,7 +100,7 @@ export default async function DashboardPage() {
               </CardHeader>
               <CardContent className="pl-2">
                 <Suspense fallback={<div>Loading activity...</div>}>
-                  <RecentActivity activities={data.userActivities} />
+                  <RecentActivity activities={userActivities} />
                 </Suspense>
               </CardContent>
             </Card>

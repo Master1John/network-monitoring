@@ -82,24 +82,24 @@ export async function POST(request: Request) {
     const deviceData = (await request.json()) as Device;
 
     // Validate required fields
-    if (!deviceData.name || !deviceData.type || !deviceData.ip) {
-      return NextResponse.json(
-        {
-          error:
-            "Missing required fields: name, type, and ipAddress are required",
-        },
-        { status: 400 },
-      );
-    }
-
-    const device = await prisma.device.findFirst(deviceData.mac);
-    if (device) {
-      return NextResponse.json({
-        success: true,
-        message: "Device Retrieved successfully",
-        device: device,
-      });
-    }
+    // if (!deviceData.name || !deviceData.type || !deviceData.ip) {
+    //   return NextResponse.json(
+    //     {
+    //       error:
+    //         "Missing required fields: name, type, and ipAddress are required",
+    //     },
+    //     { status: 400 },
+    //   );
+    // }
+    //
+    // const device = await prisma.device.findFirst(deviceData.mac);
+    // if (device) {
+    //   return NextResponse.json({
+    //     success: true,
+    //     message: "Device Retrieved successfully",
+    //     device: device,
+    //   });
+    // }
 
     const newDevice = await prisma.device.create({
       data: {
